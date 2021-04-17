@@ -99,6 +99,40 @@ void my_triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) 
     Vec2i dir1 = t2 - t1;
     Vec2i dir2 = t0 - t2;
 
+    // 当斜率为0的时候，不能取1，算的时候y值会超出最大值
+    // if (dir0.x == 0) {
+    //     dir0.x = 1;
+    // }
+    // if (dir1.x == 0) {
+    //     dir0.x = 1;
+    // }
+    // if (dir2.x == 0) {
+    //     dir0.x = 1;
+    // }
+
+    // int limit_k = 1;
+    // if (std::abs(dir0.x) <= limit_k) {
+    //     int by = std::min(t0.y, t1.y);
+    //     int ty = std::max(t0.y, t1.y);
+    //     line(Vec2i(t0.x, by), Vec2i(t0.x, ty), image, color);
+    //     line(Vec2i(t0.x-1, by), Vec2i(t0.x-1, ty), image, color);
+    //     // line(Vec2i(t0.x+1, by), Vec2i(t0.x+1, ty), image, color);
+    // }
+    // if (std::abs(dir1.x) <= limit_k) {
+    //     int by = std::min(t1.y, t2.y);
+    //     int ty = std::max(t1.y, t2.y);
+    //     line(Vec2i(t1.x, by), Vec2i(t1.x, ty), image, color);
+    //     line(Vec2i(t1.x-1, by), Vec2i(t1.x-1, ty), image, color);
+    //     // line(Vec2i(t1.x+1, by), Vec2i(t1.x+1, ty), image, color);
+    // }
+    // if (std::abs(dir2.x) <= limit_k) {
+    //     int by = std::min(t2.y, t0.y);
+    //     int ty = std::max(t2.y, t0.y);
+    //     line(Vec2i(t2.x, by), Vec2i(t2.x, ty), image, color);
+    //     line(Vec2i(t2.x-1, by), Vec2i(t2.x-1, ty), image, color);
+    //     // line(Vec2i(t2.x+1, by), Vec2i(t2.x+1, ty), image, color);
+    // }
+
     // 未考虑 dir.x 为零的情况
     float k0 = dir0.y * 1.0f / dir0.x;
     float k1 = dir1.y * 1.0f / dir1.x;
@@ -127,18 +161,20 @@ void my_triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) 
         if (ty < by) {
             std::swap(by, ty);
         }
+        // if (by == -1 || ty == -1) {
+        //     std::cout << min_y << " " << max_y << std::endl;
+        //     std::cout << y0 << " " << y1 << " " << y2 << std::endl;
+        //     std::cout << by << " " << ty << std::endl;
+        //     std::cout << std::endl;
+        // }
         line(Vec2i(x, by), Vec2i(x, ty), image, color);
     }
 }
 
 void start(TGAImage &image) {
-    // Vec2i pts[3] = {Vec2i(10,10), Vec2i(100, 30), Vec2i(190, 160)}; 
-    // Vec2i t0[3] = {Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80)}; 
-    // Vec2i t1[3] = {Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180)}; 
-    // Vec2i t2[3] = {Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180)}; 
-    // triangle(pts, image, red); 
-    // triangle(t1[0], t1[1], t1[2], image, white); 
-    // triangle(t2[0], t2[1], t2[2], image, green);
+    // Vec2i pts[3] = {Vec2i(100,100), Vec2i(100, 300), Vec2i(500, 200)}; 
+    // my_triangle(pts[0], pts[1], pts[2], image, red);
+    // triangle(pts, image, red);
 
     for (int i=0; i<model->nfaces(); i++) { 
         std::vector<int> face = model->face(i); 
@@ -153,7 +189,8 @@ void start(TGAImage &image) {
         n.normalize();
         float intensity = n*light1_dir;
         if (intensity>0) {
-            triangle(screen_coords, image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
+            my_triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
+            // triangle(screen_coords, image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
         }
     }    
 }
