@@ -11,6 +11,7 @@ Model *model = NULL;
 const int width  = 800;
 const int height = 800;
 const Vec3f light1_dir = Vec3f(0,0,-1);
+float *zbuffer = new float[width*height];
 
 /* 
  *  作用：根据 点A 和 点B 画线。
@@ -58,33 +59,51 @@ Vec3f cross(Vec3f A, Vec3f B) {
     return Vec3f(A.y*B.z-A.z*B.y, A.z*B.x-A.x*B.z, A.x*B.y-A.y*B.x);
 }
 
-Vec3f barycentric(Vec2i *pts, Vec2i P) { 
+// 重心坐标计算
+Vec3f barycentric(Vec3f *pts, Vec3f P) {
     Vec3f u = cross(Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x), Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
-    if (std::abs(u.z)<1) return Vec3f(-1,1,1);
-    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z); 
+    if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
+    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
 }
 
-void triangle(Vec2i *pts, TGAImage &image, TGAColor color) { 
-    Vec2i bboxmin(image.get_width()-1,  image.get_height()-1); 
-    Vec2i bboxmax(0, 0); 
-    Vec2i clamp(image.get_width()-1, image.get_height()-1); 
+// 从texture中获取颜色
+TGAColor getColorFromTexture(TGAImage &texture, Vec3f pos) {
+    int tWidth = texture.get_width();
+    int tHeight = texture.get_height();
+    return texture.get(int(pos.x*tWidth), int(pos.y*tHeight));
+}
+
+void triangle(Vec3f *pts, TGAImage &image, TGAImage &texture, Vec3f *texture_coords) { 
+    Vec2f bboxmin(image.get_width()-1,  image.get_height()-1); 
+    Vec2f bboxmax(0, 0); 
+    Vec2f clamp(image.get_width()-1, image.get_height()-1); 
     for (int i=0; i<3; i++) { 
         bboxmin.x = std::min(bboxmin.x, pts[i].x);
         bboxmin.y = std::min(bboxmin.y, pts[i].y);
         bboxmax.x = std::max(bboxmax.x, pts[i].x);
         bboxmax.y = std::max(bboxmax.y, pts[i].y);
     }
-    bboxmin.x = std::min(0, bboxmin.x);
-    bboxmin.y = std::min(0, bboxmin.y);
+    bboxmin.x = std::min(0.f, bboxmin.x);
+    bboxmin.y = std::min(0.f, bboxmin.y);
     bboxmax.x = std::max(clamp.x, bboxmax.x);
     bboxmax.y = std::max(clamp.y, bboxmax.y);
 
-    Vec2i P; 
+    Vec3f P, tex_uv;
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) { 
             Vec3f bc_screen  = barycentric(pts, P); 
-            if (bc_screen.x<0 || bc_screen.y<0 || bc_screen.z<0) continue; 
-            image.set(P.x, P.y, color); 
+            if (bc_screen.x<0 || bc_screen.y<0 || bc_screen.z<0) continue;
+            P.z = pts[0].z*bc_screen.x + pts[1].z*bc_screen.y + pts[2].z*bc_screen.z;
+            // std::cout << int(color.r) << " " << int(color.g) << " " << int(color.b) << std::endl;
+            // 应用zbuffer
+            if (zbuffer[int(P.x+width*P.y)] < P.z) {
+                zbuffer[int(P.x+width*P.y)] = P.z;
+                tex_uv.x = texture_coords[0].x*bc_screen.x + texture_coords[1].x*bc_screen.y + texture_coords[2].x*bc_screen.z;
+                tex_uv.y = texture_coords[0].y*bc_screen.x + texture_coords[1].y*bc_screen.y + texture_coords[2].y*bc_screen.z;
+                TGAColor color = getColorFromTexture(texture, tex_uv);
+                image.set(P.x, P.y, color); 
+            }
+            // image.set(P.x, P.y, color); 
         } 
     } 
 } 
@@ -171,26 +190,34 @@ void my_triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) 
     }
 }
 
-void start(TGAImage &image) {
+void start(TGAImage &image, TGAImage &texture) {
     // Vec2i pts[3] = {Vec2i(100,100), Vec2i(100, 300), Vec2i(500, 200)}; 
     // my_triangle(pts[0], pts[1], pts[2], image, red);
     // triangle(pts, image, red);
 
+    // 初始化zbuffer
+    for (int i = 0; i < width*height; ++i) {
+        zbuffer[i] = -std::numeric_limits<float>::max();
+    }
+
     for (int i=0; i<model->nfaces(); i++) { 
         std::vector<int> face = model->face(i); 
-        Vec2i screen_coords[3]; 
+        std::vector<int> faceTex = model->faceTex(i);
+        Vec3f screen_coords[3]; 
         Vec3f world_coords[3];
+        Vec3f texture_coords[3];
         for (int j=0; j<3; j++) { 
             Vec3f v = model->vert(face[j]); 
-            screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.); 
+            screen_coords[j] = Vec3f(int((v.x+1.)*width/2.+.5), int((v.y+1.)*height/2.+.5), v.z); 
             world_coords[j] = v;
+            texture_coords[j] = model->texCoord(faceTex[j]);
         } 
         Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]);
         n.normalize();
         float intensity = n*light1_dir;
         if (intensity>0) {
-            my_triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
-            // triangle(screen_coords, image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
+            // my_triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
+            triangle(screen_coords, image, texture, texture_coords);
         }
     }    
 }
@@ -198,7 +225,9 @@ void start(TGAImage &image) {
 int main(int argc, char** argv) {
     model = new Model("../obj/african_head.obj");
     TGAImage image(width, height, TGAImage::RGB);
-    start(image);
+    TGAImage texture;
+    texture.read_tga_file("../obj/african_head_diffuse.tga");
+    start(image, texture);
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
     image.write_tga_file("output.tga");
     delete model;
