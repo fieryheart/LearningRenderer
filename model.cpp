@@ -17,30 +17,38 @@ Model::Model(const char *filename) : verts_(), faces_() {
         if (!line.compare(0, 2, "v ")) {
             iss >> trash;
             Vec3f v;
-            for (int i=0;i<3;i++) iss >> v.raw[i];
+            for (int i=0;i<3;i++) iss >> v[i];
             verts_.push_back(v);
         } else if (!line.compare(0, 2, "f ")) {
-            std::vector<int> f, tex;
-            int itrash, idx, texIdx;
+            std::vector<int> f, tex, norm;
+            int itrash, idx, texIdx, normIdx;
             iss >> trash;
-            while (iss >> idx >> trash >> texIdx >> trash >> itrash) {
+            while (iss >> idx >> trash >> texIdx >> trash >> normIdx) {
                 idx--; // in wavefront obj all indices start at 1, not zero
                 texIdx--;
+                normIdx--;
                 f.push_back(idx);
                 tex.push_back(texIdx);
+                norm.push_back(normIdx);
             }
             faces_.push_back(f);
             facesTex_.push_back(tex);
+            facesNorm_.push_back(norm);
         } else if (!line.compare(0, 3, "vt ")) {
             iss >> trash >> trash;
             Vec3f v;
-            for (int i=0;i<3;i++) iss >> v.raw[i];
+            for (int i=0;i<3;i++) iss >> v[i];
             // std::cout << v << std::endl;
             v.y = 1.f - v.y;
             texCoord_.push_back(v);
+        } else if (!line.compare(0, 3, "vn ")) {
+            iss >> trash >> trash;
+            Vec3f v;
+            for (int i=0;i<3;i++) iss >> v[i];
+            norm_.push_back(v);
         }
     }
-    std::cerr << "# v# " << verts_.size() << " f# "  << faces_.size() << " vt# " << texCoord_.size() << std::endl;
+    std::cerr << "# v# " << verts_.size() << " f# "  << faces_.size() << " vt# " << texCoord_.size() << " vn# " << norm_.size() << std::endl;
 }
 
 Model::~Model() {
@@ -72,4 +80,8 @@ Vec3f Model::vert(int i) {
 
 Vec3f Model::texCoord(int i) {
     return texCoord_[i];
+}
+
+Vec3f Model::norm(int i, int j) {
+    return norm_[facesNorm_[i][j]].normalize();
 }
