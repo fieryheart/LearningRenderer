@@ -148,7 +148,7 @@ TGAColor getColorFromTexture(TGAImage &texture, Vec3f pos) {
  *      texture_coords: 点ABC对应的纹理坐标
  *  返回：无
  */
-void triangle(Vec3f *pts, TGAImage &image, TGAImage &texture, Vec3f *texture_coords) { 
+void triangle(Vec3f *pts, TGAImage &image, TGAImage &texture, Vec3f *texture_coords, float *intensity) { 
     Vec2f bboxmin(image.get_width()-1,  image.get_height()-1); 
     Vec2f bboxmax(0, 0); 
     Vec2f clamp(image.get_width()-1, image.get_height()-1); 
@@ -176,7 +176,8 @@ void triangle(Vec3f *pts, TGAImage &image, TGAImage &texture, Vec3f *texture_coo
                 zbuffer[int(P.x+width*P.y)] = P.z;
                 tex_uv.x = texture_coords[0].x*bc_screen.x + texture_coords[1].x*bc_screen.y + texture_coords[2].x*bc_screen.z;
                 tex_uv.y = texture_coords[0].y*bc_screen.x + texture_coords[1].y*bc_screen.y + texture_coords[2].y*bc_screen.z;
-                TGAColor color = getColorFromTexture(texture, tex_uv);
+                float weight = (bc_screen[0]*intensity[0]+bc_screen[1]*intensity[1]+bc_screen[2]*intensity[2]);
+                TGAColor color = getColorFromTexture(texture, tex_uv)*weight;
                 image.set(P.x, P.y, color);
             }
         } 
@@ -345,10 +346,10 @@ void start(TGAImage &image, TGAImage &texture) {
         // my_triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
         
         // 纹理插值
-        // triangle(screen_coords, image, texture, texture_coords);
+        triangle(screen_coords, image, texture, texture_coords, intensity);
 
         // 法向量插值
-        triangle(screen_coords, image, intensity);
+        // triangle(screen_coords, image, intensity);
     }    
 }
 
