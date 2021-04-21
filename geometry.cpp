@@ -17,7 +17,6 @@ template <> template <> Vec3<float>::Vec3(const Vec3<int> &v) : x(v.x), y(v.y), 
 }
 
 
-
 Matrix::Matrix(int r, int c) : m(std::vector<std::vector<float> >(r, std::vector<float>(c, 0.f))), rows(r), cols(c) { }
 
 int Matrix::nrows() {

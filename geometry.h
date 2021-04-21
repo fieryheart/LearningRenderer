@@ -1,6 +1,7 @@
 #ifndef __GEOMETRY_H__
 #define __GEOMETRY_H__
 
+#include <vector>
 #include <cmath>
 
 template <class t> struct Vec2 {
@@ -71,7 +72,7 @@ template <class t> std::ostream& operator<<(std::ostream& s, Vec3<t>& v) {
 const int DEFAULT_ALLOC=4;
 
 class Matrix {
-    std::vector<std::vector<float> > m;
+    std::vector<std::vector<float>> m;
     int rows, cols;
 public:
     Matrix(int r=DEFAULT_ALLOC, int c=DEFAULT_ALLOC);
