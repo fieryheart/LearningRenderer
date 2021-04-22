@@ -7,7 +7,7 @@ Model *model = NULL;
 const int width  = 800;
 const int height = 800;
 const int depth = 255;  // 根据深度值 计算颜色
-const Vec3f light1_dir = Vec3f(1,-1,1).normalize();
+const Vec3f light1_dir(1,1,1);
 const Vec3f camera(1,1,10);
 const Vec3f origin(0,0,0);
 const Vec3f up(0,1,0);
@@ -85,20 +85,40 @@ public:
 };
 
 class PhongShader : public Shader {
-    Vec3f varying_intensity;
-    Vec3f varying_uv[3];
 public:
+    // Vec3f varying_intensity;
+    Vec3f varying_uv[3];
+    Matrix uniform_M;
+    Matrix uniform_MIT;
+
     virtual Vec4f vertex(int nthface, int nthvert) {
-        varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
+        // varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
         Vec4f gl_vertex = model->vert(nthface, nthvert);
         gl_vertex = TransformMatrix*gl_vertex;
         varying_uv[nthvert] = model->texCoord(nthface, nthvert);
         return  gl_vertex/gl_vertex[3];
     }
     virtual bool fragment(Vec3f bar, TGAColor &color) {
-        float intensity = varying_intensity*bar;
+        // float intensity = varying_intensity*bar;
         Vec3f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];
-        color = model->diffuse(uv);
+        Vec4f n(model->normal(uv),0.f);
+        n = (uniform_M*n).normalize();
+        Vec4f l(light1_dir, 0.f);
+        l = (uniform_MIT*l).normalize();
+
+        Vec4f r = (n*(n*l*2.f) - l).normalize();   // reflected light
+
+        float spec = std::pow(std::max(r.z, 0.0f), model->specular(uv));
+        float diff = std::max(0.f, n*l);
+
+        TGAColor c = model->diffuse(uv);
+        
+        for (int i=0; i<3; i++) {
+            // 5. : 环境光部分
+            // 1. : 漫反射部分
+            // .6 : 高光部分
+            color[i] = std::min<float>(5. + c[i]*(1.*diff + .6*spec), 255);
+        }
         return false;
     }
 };
@@ -125,6 +145,9 @@ void start() {
     GouraudShader gouraudshader;
     ToonShader toonShader;
     PhongShader phongShader;
+
+    phongShader.uniform_M = ProjectMatrix*ViewMatrix;
+    phongShader.uniform_MIT = (ProjectMatrix*ViewMatrix).inverse().transpose();
     for (int i=0; i<model->nfaces(); i++) {
         Vec4f screen_coords[3];
         for (int j=0; j<3; j++) {
