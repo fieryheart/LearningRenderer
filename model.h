@@ -20,7 +20,7 @@ public:
 	int nfaces();
 	std::vector<int> face(int idx);
 	std::vector<int> faceTex(int idx);
-	Vec3f vert(int nthface, int nthvert);
+	Vec4f vert(int nthface, int nthvert);
 	Vec3f texCoord(int idx);
 	Vec3f norm(int i, int j);
 };

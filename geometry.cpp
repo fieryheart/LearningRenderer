@@ -4,20 +4,21 @@
 #include <iostream>
 #include "geometry.h"
 
-// template <> template <> Vec3<int>::Vec3<>(const Vec3<float> &v) : x(int(v.x+.5)), y(int(v.y+.5)), z(int(v.z+.5)) {
-// }
-
-// template <> template <> Vec3<float>::Vec3<>(const Vec3<int> &v) : x(v.x), y(v.y), z(v.z) {
-// }
-
 template <> template <> Vec3<int>::Vec3(const Vec3<float> &v) : x(int(v.x+.5)), y(int(v.y+.5)), z(int(v.z+.5)) {
 }
 
 template <> template <> Vec3<float>::Vec3(const Vec3<int> &v) : x(v.x), y(v.y), z(v.z) {
 }
 
-
 Matrix::Matrix(int r, int c) : m(std::vector<std::vector<float> >(r, std::vector<float>(c, 0.f))), rows(r), cols(c) { }
+
+// Matrix::Matrix(Vec4f v) {
+//     m = std::vector<std::vector<float>>(4, std::vector<float>(1, 0.f));
+//     m[0][0] = v[0];
+//     m[1][0] = v[1];
+//     m[2][0] = v[2];
+//     m[3][0] = v[3];
+// }
 
 int Matrix::nrows() {
     return rows;
@@ -51,6 +52,19 @@ Matrix Matrix::operator*(const Matrix& a) {
             for (int k=0; k<cols; k++) {
                 result.m[i][j] += m[i][k]*a.m[k][j];
             }
+        }
+    }
+    return result;
+}
+
+Vec4f Matrix::operator*(Vec4f& a) {
+    assert(rows == 4);
+    assert(cols == 4);
+    Vec4f result;
+    for (int i=0; i<4; i++) {
+        result[i] = 0.f;
+        for (int j=0; j<4; j++) {
+            result[i] += m[i][j]*a[j]; 
         }
     }
     return result;

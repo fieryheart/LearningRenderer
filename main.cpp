@@ -1,5 +1,6 @@
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include "qgl.h"
 
 Model *model = NULL;
@@ -10,10 +11,11 @@ const Vec3f light1_dir = Vec3f(1,-1,1).normalize();
 const Vec3f camera(1,1,10);
 const Vec3f origin(0,0,0);
 const Vec3f up(0,1,0);
-Matrix ModelMatrix(4,4);       // 模型空间
-Matrix ViewMatrix(4,4);        // 视角空间
-Matrix ProjectMatrix(4,4);     // 投影空间
-Matrix ViewportMatrix(4,4);    // 屏幕空间
+Matrix ModelMatrix;       // 模型空间
+Matrix ViewMatrix;        // 视角空间
+Matrix ProjectMatrix;     // 投影空间
+Matrix ViewportMatrix;    // 屏幕空间
+Matrix TransformMatrix;
 
 
 // v 表示点
@@ -47,12 +49,10 @@ class GouraudShader : public Shader {
     Vec3f varying_intensity;
     // GouraudShader (Model *model_) : model(_model) {}
 public:
-    virtual Vec3f vertex(int nthface, int nthvert) {
-        varying_intensity[nthvert] = std::max(0.f, model->norm(nthface, nthvert)*light1_dir);
-        Vec3f gl_vertex = model->vert(nthface, nthvert);
-        gl_vertex = mat2vec(
-                    ViewportMatrix*ProjectMatrix*ViewMatrix*ModelMatrix*vec2mat(gl_vertex)
-                );
+    virtual Vec4f vertex(int nthface, int nthvert) {
+        varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
+        Vec4f gl_vertex = model->vert(nthface, nthvert);
+        gl_vertex = ViewportMatrix*ProjectMatrix*ViewMatrix*ModelMatrix*gl_vertex;
         // std::cout << gl_vertex << std::endl;s
         return  gl_vertex;
     }
@@ -63,6 +63,30 @@ public:
     }
 };
 
+class ToonShader : public Shader {
+    // Model *model;
+    Vec3f varying_intensity;
+    // GouraudShader (Model *model_) : model(_model) {}
+public:
+    virtual Vec4f vertex(int nthface, int nthvert) {
+        varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
+        Vec4f gl_vertex = model->vert(nthface, nthvert);
+        gl_vertex = TransformMatrix*gl_vertex;
+        // std::cout << gl_vertex << std::endl;s
+        return  gl_vertex/gl_vertex[3];
+    }
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        float intensity = varying_intensity*bar;
+        if (intensity>.85) intensity = 1;
+        else if (intensity>.60) intensity = .80;
+        else if (intensity>.45) intensity = .60;
+        else if (intensity>.30) intensity = .45;
+        else if (intensity>.15) intensity = .30;
+        else intensity = 0;
+        color = TGAColor(255, 155, 0)*intensity;
+        return false;
+    }
+};
 
 void start() {
     TGAImage image(width, height, TGAImage::RGB);
@@ -75,6 +99,7 @@ void start() {
     ViewMatrix = GetViewMatrix(camera, origin, up);
     ProjectMatrix = GetProjectMatrix(camera, origin);
     ViewportMatrix = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
+    TransformMatrix = ViewportMatrix*ProjectMatrix*ViewMatrix*ModelMatrix;
 
     // std::cout << ModelMatrix << std::endl;
     // std::cout << ViewMatrix << std::endl;
@@ -83,13 +108,14 @@ void start() {
 
     // Shading
     GouraudShader gouraudshader;
+    ToonShader toonShader;
     for (int i=0; i<model->nfaces(); i++) {
-        Vec3f screen_coords[3];
+        Vec4f screen_coords[3];
         for (int j=0; j<3; j++) {
-            screen_coords[j] = gouraudshader.vertex(i, j);
+            screen_coords[j] = toonShader.vertex(i, j);
             // std::cout << screen_coords[j] << std::endl;
         }
-        triangle(screen_coords, gouraudshader, image, zbuffer);
+        triangle(screen_coords, toonShader, image, zbuffer);
     }
 
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image

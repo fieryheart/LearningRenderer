@@ -55,7 +55,7 @@ Matrix GetViewportMatrix(int x, int y, int w, int h, int depth) {
 }
 
 // 重心坐标计算
-Vec3f barycentric(Vec3f *pts, Vec2f P) {
+Vec3f barycentric(Vec4f *pts, Vec2f P) {
     Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
     if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
     return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
@@ -70,7 +70,7 @@ Vec3f barycentric(Vec3f *pts, Vec2f P) {
  *      zbuffer: z-buffer数据
  *  返回：无
  */
-void triangle(Vec3f *pts, Shader &shader, TGAImage &image, TGAImage &zbuffer) {
+void triangle(Vec4f *pts, Shader &shader, TGAImage &image, TGAImage &zbuffer) {
     Vec2f bboxmin(image.get_width()-1,  image.get_height()-1); 
     Vec2f bboxmax(0, 0); 
     Vec2f clamp(image.get_width()-1, image.get_height()-1); 
@@ -91,8 +91,8 @@ void triangle(Vec3f *pts, Shader &shader, TGAImage &image, TGAImage &zbuffer) {
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
             Vec3f bc = barycentric(pts, Vec2f(P.x, P.y));
             float z = pts[0][2]*bc.x+pts[1][2]*bc.y+pts[2][2]*bc.z;
-            // float w = pts[0][3]*bc.x+pts[1][3]*bc.y+pts[2][3]*bc.z;
-            int depth = std::max(0, std::min(255, int(z+.5f)));
+            float w = pts[0][3]*bc.x+pts[1][3]*bc.y+pts[2][3]*bc.z;
+            int depth = std::max(0, std::min(255, int(z/w+.5f)));
             if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer.get(P.x, P.y)[0] > depth) continue;
             if (!shader.fragment(bc, color)) {
                 zbuffer.set(P.x, P.y, depth);

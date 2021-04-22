@@ -18,11 +18,11 @@ Matrix GetViewportMatrix(int x, int y, int w, int h, int depth);
 class Shader {
 public:
     virtual ~Shader();
-    virtual Vec3f vertex(int nthface, int nthvert) = 0;
+    virtual Vec4f vertex(int nthface, int nthvert) = 0;
     virtual bool fragment(Vec3f bar, TGAColor &color) = 0;
 };
 
-void triangle(Vec3f *pts, Shader &shader, TGAImage &image, TGAImage &zbuffer);
+void triangle(Vec4f *pts, Shader &shader, TGAImage &image, TGAImage &zbuffer);
 
 void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color);
 

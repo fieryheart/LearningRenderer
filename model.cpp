@@ -74,8 +74,8 @@ std::vector<int> Model::faceTex(int idx) {
     return facesTex_[idx];
 }
 
-Vec3f Model::vert(int nthface, int nthvert) {
-    return verts_[faces_[nthface][nthvert]];
+Vec4f Model::vert(int nthface, int nthvert) {
+    return Vec4f(verts_[faces_[nthface][nthvert]], 1.f);
 }
 
 Vec3f Model::texCoord(int i) {
