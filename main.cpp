@@ -45,9 +45,7 @@ TGAColor getColorFromTexture(TGAImage &texture, Vec3f pos) {
 
 
 class GouraudShader : public Shader {
-    // Model *model;
     Vec3f varying_intensity;
-    // GouraudShader (Model *model_) : model(_model) {}
 public:
     virtual Vec4f vertex(int nthface, int nthvert) {
         varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
@@ -64,9 +62,7 @@ public:
 };
 
 class ToonShader : public Shader {
-    // Model *model;
     Vec3f varying_intensity;
-    // GouraudShader (Model *model_) : model(_model) {}
 public:
     virtual Vec4f vertex(int nthface, int nthvert) {
         varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
@@ -88,11 +84,30 @@ public:
     }
 };
 
+class PhongShader : public Shader {
+    Vec3f varying_intensity;
+    Vec3f varying_uv[3];
+public:
+    virtual Vec4f vertex(int nthface, int nthvert) {
+        varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
+        Vec4f gl_vertex = model->vert(nthface, nthvert);
+        gl_vertex = TransformMatrix*gl_vertex;
+        varying_uv[nthvert] = model->texCoord(nthface, nthvert);
+        return  gl_vertex/gl_vertex[3];
+    }
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        float intensity = varying_intensity*bar;
+        Vec3f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];
+        color = model->diffuse(uv);
+        return false;
+    }
+};
+
 void start() {
     TGAImage image(width, height, TGAImage::RGB);
     TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
-    TGAImage texture;
-    texture.read_tga_file("../obj/african_head_diffuse.tga");
+    // TGAImage texture;
+    // texture.read_tga_file("../obj/african_head_diffuse.tga");
 
     // 初始化各转换矩阵
     ModelMatrix = GetModelMatrix();
@@ -109,13 +124,14 @@ void start() {
     // Shading
     GouraudShader gouraudshader;
     ToonShader toonShader;
+    PhongShader phongShader;
     for (int i=0; i<model->nfaces(); i++) {
         Vec4f screen_coords[3];
         for (int j=0; j<3; j++) {
-            screen_coords[j] = toonShader.vertex(i, j);
+            screen_coords[j] = phongShader.vertex(i, j);
             // std::cout << screen_coords[j] << std::endl;
         }
-        triangle(screen_coords, toonShader, image, zbuffer);
+        triangle(screen_coords, phongShader, image, zbuffer);
     }
 
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image

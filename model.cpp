@@ -38,8 +38,6 @@ Model::Model(const char *filename) : verts_(), faces_() {
             iss >> trash >> trash;
             Vec3f v;
             for (int i=0;i<3;i++) iss >> v[i];
-            // std::cout << v << std::endl;
-            v.y = 1.f - v.y;
             texCoord_.push_back(v);
         } else if (!line.compare(0, 3, "vn ")) {
             iss >> trash >> trash;
@@ -49,6 +47,7 @@ Model::Model(const char *filename) : verts_(), faces_() {
         }
     }
     std::cerr << "# v# " << verts_.size() << " f# "  << faces_.size() << " vt# " << texCoord_.size() << " vn# " << norm_.size() << std::endl;
+    load_texture(filename, "_diffuse.tga", diffusemap_);
 }
 
 Model::~Model() {
@@ -78,10 +77,24 @@ Vec4f Model::vert(int nthface, int nthvert) {
     return Vec4f(verts_[faces_[nthface][nthvert]], 1.f);
 }
 
-Vec3f Model::texCoord(int i) {
-    return texCoord_[i];
+Vec3f Model::texCoord(int nthface, int nthvert) {
+    return texCoord_[facesTex_[nthface][nthvert]];
 }
 
 Vec3f Model::norm(int i, int j) {
     return norm_[facesNorm_[i][j]].normalize();
+}
+
+TGAColor Model::diffuse(Vec3f uv) {
+    return diffusemap_.get(int(uv.x*diffusemap_.get_width()), int(uv.y*diffusemap_.get_height()));
+}
+
+void Model::load_texture(std::string filename, const char *suffix, TGAImage &img) {
+    std::string texfile(filename);
+    size_t dot = texfile.find_last_of(".");
+    if (dot!=std::string::npos) {
+        texfile = texfile.substr(0,dot) + std::string(suffix);
+        std::cerr << "texture file " << texfile << " loading " << (img.read_tga_file(texfile.c_str()) ? "ok" : "failed") << std::endl;
+        img.flip_vertically();
+    }
 }
