@@ -102,9 +102,9 @@ public:
         // float intensity = varying_intensity*bar;
         Vec3f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];
         Vec4f n(model->normal(uv),0.f);
-        n = (uniform_M*n).normalize();
+        n = (uniform_MIT*n).normalize();
         Vec4f l(light1_dir, 0.f);
-        l = (uniform_MIT*l).normalize();
+        l = (uniform_M*l).normalize();
 
         Vec4f r = (n*(n*l*2.f) - l).normalize();   // reflected light
 
@@ -152,7 +152,6 @@ void start() {
         Vec4f screen_coords[3];
         for (int j=0; j<3; j++) {
             screen_coords[j] = phongShader.vertex(i, j);
-            // std::cout << screen_coords[j] << std::endl;
         }
         triangle(screen_coords, phongShader, image, zbuffer);
     }
@@ -161,6 +160,7 @@ void start() {
     image.write_tga_file("output.tga");
     zbuffer.flip_vertically();
     zbuffer.write_tga_file("zbuffer.tga");
+
 }
 
 int main(int argc, char** argv) {

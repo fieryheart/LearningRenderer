@@ -48,8 +48,8 @@ Model::Model(const char *filename) : verts_(), faces_() {
     }
     std::cerr << "# v# " << verts_.size() << " f# "  << faces_.size() << " vt# " << texCoord_.size() << " vn# " << norm_.size() << std::endl;
     load_texture(filename, "_diffuse.tga", diffusemap_);
-    load_texture(filename, "_nm.tga",      normalmap_);
-    load_texture(filename, "_spec.tga",    specularmap_);
+    // load_texture(filename, "_nm.tga",      normalmap_);
+    // load_texture(filename, "_spec.tga",    specularmap_);
 }
 
 Model::~Model() {
@@ -112,3 +112,69 @@ void Model::load_texture(std::string filename, const char *suffix, TGAImage &img
         img.flip_vertically();
     }
 }
+
+Vec3f barycentric(Vec3f *pts, Vec2f P) {
+    Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
+    if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
+    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+}
+
+// not to generate normal mapping by using interpolation
+// void Model::generate_normal_mapping(const char *filename) {
+//     TGAImage image(diffusemap_.get_width(), diffusemap_.get_height(), TGAImage::RGB);
+//     for (int i=0; i<nfaces(); i++) {
+//         Vec3f uv[3];
+//         Vec3f normals[3];
+//         for (int j=0; j<3; j++) {
+//             uv[j] = texCoord(i, j);
+//             uv[j].x = uv[j].x * diffusemap_.get_width();
+//             uv[j].y = uv[j].y * diffusemap_.get_height();
+//             normals[j] = norm(i, j);
+//         }
+//         // triangle(screen_coords, phongShader, image, zbuffer);
+
+//         Vec2f bboxmin(image.get_width()-1,  image.get_height()-1); 
+//         Vec2f bboxmax(0, 0); 
+//         Vec2f clamp(image.get_width()-1, image.get_height()-1); 
+//         for (int i=0; i<3; i++) {
+//             bboxmin.x = std::min(bboxmin.x, uv[i].x);
+//             bboxmin.y = std::min(bboxmin.y, uv[i].y);
+//             bboxmax.x = std::max(bboxmax.x, uv[i].x);
+//             bboxmax.y = std::max(bboxmax.y, uv[i].y);
+//         }
+//         bboxmin.x = std::min(0.f, bboxmin.x);
+//         bboxmin.y = std::min(0.f, bboxmin.y);
+//         bboxmax.x = std::max(clamp.x, bboxmax.x);
+//         bboxmax.y = std::max(clamp.y, bboxmax.y);
+        
+//         // std::cout << uv[0] << std::endl;
+//         // std::cout << uv[1] << std::endl;
+//         // std::cout << uv[2] << std::endl;
+
+//         Vec2i P;
+//         TGAColor color;
+//         long lR, lG, lB;
+//         unsigned char R, G, B;
+//         for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
+//             for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
+//                 Vec3f bc = barycentric(uv, Vec2f(P.x, P.y));
+//                 Vec3f n = normals[0]*bc.x+normals[1]*bc.y+normals[2]*bc.z;
+//                 // std::cout << bc << std::endl;
+//                 if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
+//                 n = (n*0.5f+0.5f) * 255.0f;
+//                 // std::cout << n << std::endl;
+//                 lR = (long)n.x;
+//                 lG = (long)n.y;
+//                 lB = (long)n.z;
+//                 R = (unsigned char)lR;
+//                 G = (unsigned char)lG;
+//                 B = (unsigned char)lB;
+//                 color = TGAColor(R,G,B);
+//                 image.set(P.x, P.y, color);
+//             }
+//         }
+//     }
+
+//     image.flip_vertically();
+//     image.write_tga_file(filename);
+// }
