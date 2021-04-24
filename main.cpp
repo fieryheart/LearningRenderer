@@ -17,33 +17,6 @@ Matrix ProjectMatrix;     // 投影空间
 Matrix ViewportMatrix;    // 屏幕空间
 Matrix TransformMatrix;
 
-
-// v 表示点
-Matrix vec2mat(Vec3f v) {
-    Matrix mat(4, 1);
-    mat[0][0] = v[0];
-    mat[1][0] = v[1];
-    mat[2][0] = v[2];
-    mat[3][0] = 1.f;
-    return mat;
-}
-
-Vec3f mat2vec(Matrix mat) {
-    Vec3f v;
-    v[0] = mat[0][0];
-    v[1] = mat[1][0];
-    v[2] = mat[2][0];
-    return v;
-}
-
-// 从texture中获取颜色
-TGAColor getColorFromTexture(TGAImage &texture, Vec3f pos) {
-    int tWidth = texture.get_width();
-    int tHeight = texture.get_height();
-    return texture.get(int(pos.x*tWidth), int(pos.y*tHeight));
-} 
-
-
 class GouraudShader : public Shader {
     Vec3f varying_intensity;
 public:
@@ -86,25 +59,34 @@ public:
 
 class PhongShader : public Shader {
 public:
-    // Vec3f varying_intensity;
-    Vec3f varying_uv[3];
-    Matrix uniform_M;
-    Matrix uniform_MIT;
+    // 变换矩阵
+    Matrix mat_model, mat_view, mat_project, mat_viewport;
+    Matrix mat_transform;
+    Matrix mat_normal, mat_normal_it;
+
+    Vec4f gl_vertex[3];
+    Vec3f tex_uv[3];
+
+    void computeTranform() {
+        mat_transform = mat_viewport*mat_project*mat_view*mat_model;
+        mat_normal = mat_project*mat_view*mat_model;
+        mat_normal_it = mat_normal.inverse().transpose();
+    }
 
     virtual Vec4f vertex(int nthface, int nthvert) {
         // varying_intensity[nthvert] = std::clamp(model->norm(nthface, nthvert)*light1_dir, 0.f, 1.f);
-        Vec4f gl_vertex = model->vert(nthface, nthvert);
-        gl_vertex = TransformMatrix*gl_vertex;
-        varying_uv[nthvert] = model->texCoord(nthface, nthvert);
-        return  gl_vertex/gl_vertex[3];
+        gl_vertex[nthvert] = model->vert(nthface, nthvert);
+        gl_vertex[nthvert] = mat_transform*gl_vertex[nthvert];
+        tex_uv[nthvert] = model->texCoord(nthface, nthvert);
+        return  gl_vertex[nthvert]/gl_vertex[nthvert][3];
     }
     virtual bool fragment(Vec3f bar, TGAColor &color) {
         // float intensity = varying_intensity*bar;
-        Vec3f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];
+        Vec3f uv = tex_uv[0]*bar[0]+tex_uv[1]*bar[1]+tex_uv[2]*bar[2];
         Vec4f n(model->normal(uv),0.f);
-        n = (uniform_MIT*n).normalize();
+        n = (mat_normal_it*n).normalize();
         Vec4f l(light1_dir, 0.f);
-        l = (uniform_M*l).normalize();
+        l = (mat_normal*l).normalize();
 
         Vec4f r = (n*(n*l*2.f) - l).normalize();   // reflected light
 
@@ -112,6 +94,9 @@ public:
         float diff = std::max(0.f, n*l);
 
         TGAColor c = model->diffuse(uv);
+
+        // std::cout << n << " " << l << std::endl;
+        // std::cout << (int)c[0] << " " << (int)c[1] << " " << (int)c[2] << std::endl;
         
         for (int i=0; i<3; i++) {
             // 5. : 环境光部分
@@ -119,15 +104,79 @@ public:
             // .6 : 高光部分
             color[i] = std::min<float>(5. + c[i]*(1.*diff + .6*spec), 255);
         }
+
         return false;
     }
 };
 
+class DepthShader : public Shader {
+public:
+    // 变换矩阵
+    Matrix mat_model, mat_view, mat_project, mat_viewport;
+    Matrix mat_transform, mat_transform_it;
+
+    // 顶点相关数据
+    float gl_depth[3];
+
+    void computeTranform() {
+        mat_transform = mat_viewport*mat_view*mat_model;
+    }
+
+    virtual Vec4f vertex(int nthface, int nthvert) { 
+        Vec4f gl_vertex = model->vert(nthface, nthvert);
+        gl_vertex = mat_transform*gl_vertex;
+        gl_vertex = gl_vertex/gl_vertex[3];
+        gl_depth[nthvert] = gl_vertex[2];
+        return gl_vertex;
+    }
+
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        int d = (int)(bar[0]*gl_depth[0]+bar[1]*gl_depth[1]+bar[2]*gl_depth[2]);
+        color = TGAColor(d, d, d);
+        // std::cout << d << std::endl;
+        return false;
+    }
+};
+
+class ShadowShader : public Shader {
+public:
+    Matrix mat_transform_depth;
+    PhongShader phongShader;
+    Vec4f gl_vertex[3];
+
+    virtual Vec4f vertex(int nthface, int nthvert) { 
+        gl_vertex[nthvert] = model->vert(nthface, nthvert);
+        return phongShader.vertex(nthface, nthvert);    
+    }
+
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        phongShader.fragment(bar, color);
+        Vec4f v = gl_vertex[0]*bar[0]+gl_vertex[1]*bar[1]+gl_vertex[2]*bar[2];
+        v = mat_transform_depth*v;
+        v = v / v[3];
+        int d = model->depthmap.get(int(v[0]+.5f), int(v[1]+.5f))[0];
+        // float shadow = .3f;
+        if (v[2] < d-1) {
+            // 产生阴影
+            color = TGAColor(10, 10, 10);
+        }
+        return false;
+    }
+};
+
+void shading(TGAImage &image, TGAImage &zbuffer, Shader &shader) {
+    Vec4f screen_coords[3];
+    for (int i=0; i<model->nfaces(); i++) {
+        for (int j=0; j<3; j++) {
+            screen_coords[j] = shader.vertex(i, j);
+        }
+        triangle(screen_coords, shader, image, zbuffer);
+    }
+}
+
 void start() {
     TGAImage image(width, height, TGAImage::RGB);
     TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
-    // TGAImage texture;
-    // texture.read_tga_file("../obj/african_head_diffuse.tga");
 
     // 初始化各转换矩阵
     ModelMatrix = GetModelMatrix();
@@ -136,31 +185,39 @@ void start() {
     ViewportMatrix = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
     TransformMatrix = ViewportMatrix*ProjectMatrix*ViewMatrix*ModelMatrix;
 
-    // std::cout << ModelMatrix << std::endl;
-    // std::cout << ViewMatrix << std::endl;
-    // std::cout << ProjectMatrix << std::endl;
-    // std::cout << ViewportMatrix << std::endl;
-
     // Shading
-    GouraudShader gouraudshader;
-    ToonShader toonShader;
-    PhongShader phongShader;
+    DepthShader depthShader;
+    depthShader.mat_model = GetModelMatrix();
+    depthShader.mat_view = GetViewMatrix(light1_dir, origin, up);
+    depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
+    depthShader.computeTranform();
+    // 获取深度数据
+    model->depthmap = TGAImage(width, height, TGAImage::RGB);
+    shading(model->depthmap, zbuffer, depthShader);
 
-    phongShader.uniform_M = ProjectMatrix*ViewMatrix;
-    phongShader.uniform_MIT = (ProjectMatrix*ViewMatrix).inverse().transpose();
-    for (int i=0; i<model->nfaces(); i++) {
-        Vec4f screen_coords[3];
-        for (int j=0; j<3; j++) {
-            screen_coords[j] = phongShader.vertex(i, j);
-        }
-        triangle(screen_coords, phongShader, image, zbuffer);
-    }
+    // Phong Shading
+    PhongShader phongShader;
+    phongShader.mat_model = GetModelMatrix();
+    phongShader.mat_view = GetViewMatrix(camera, origin, up);
+    phongShader.mat_project = GetProjectMatrix(camera, origin);
+    phongShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
+    phongShader.computeTranform();
+
+    // Shadow Shading
+    ShadowShader shadowShader;
+    shadowShader.mat_transform_depth = depthShader.mat_transform;
+    shadowShader.phongShader = phongShader;
+    zbuffer.clear();
+    shading(image, zbuffer, shadowShader);
+
 
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
     image.write_tga_file("output.tga");
-    zbuffer.flip_vertically();
-    zbuffer.write_tga_file("zbuffer.tga");
+    // zbuffer.flip_vertically();
+    // zbuffer.write_tga_file("zbuffer.tga");
 
+    model->depthmap.flip_vertically();
+    model->depthmap.write_tga_file("output_depth.tga");
 }
 
 int main(int argc, char** argv) {

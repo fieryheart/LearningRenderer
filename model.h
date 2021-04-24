@@ -17,6 +17,8 @@ private:
 	TGAImage normalmap_;
 	TGAImage specularmap_;
 public:
+	TGAImage depthmap;
+
 	Model(const char *filename);
 	~Model();
 	int nverts();

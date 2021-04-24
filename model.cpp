@@ -48,8 +48,8 @@ Model::Model(const char *filename) : verts_(), faces_() {
     }
     std::cerr << "# v# " << verts_.size() << " f# "  << faces_.size() << " vt# " << texCoord_.size() << " vn# " << norm_.size() << std::endl;
     load_texture(filename, "_diffuse.tga", diffusemap_);
-    // load_texture(filename, "_nm.tga",      normalmap_);
-    // load_texture(filename, "_spec.tga",    specularmap_);
+    load_texture(filename, "_nm.tga",      normalmap_);
+    load_texture(filename, "_spec.tga",    specularmap_);
 }
 
 Model::~Model() {
@@ -113,11 +113,11 @@ void Model::load_texture(std::string filename, const char *suffix, TGAImage &img
     }
 }
 
-Vec3f barycentric(Vec3f *pts, Vec2f P) {
-    Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
-    if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
-    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
-}
+// Vec3f barycentric(Vec3f *pts, Vec2f P) {
+//     Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
+//     if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
+//     return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+// }
 
 // not to generate normal mapping by using interpolation
 // void Model::generate_normal_mapping(const char *filename) {
