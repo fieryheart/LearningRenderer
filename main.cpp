@@ -1,6 +1,8 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include <cmath>
+#include <unistd.h>
 #include "qgl.h"
 
 Model *model = NULL;
@@ -10,7 +12,13 @@ const int depth = 255;  // 根据深度值 计算颜色
 const Vec3f light1_dir(1,1,1);
 const Vec3f camera(1,1,10);
 const Vec3f origin(0,0,0);
-const Vec3f up(0,1,0);
+// const Vec3f up(0,1,0);
+
+struct Log {
+    bool flag;
+    std::string prefix;
+    Log(bool _flag, std::string _prefix) : flag(_flag), prefix(_prefix){}
+};
 
 class GouraudShader : public Shader {
 public:
@@ -37,8 +45,7 @@ public:
     }
 };
 
-
-// Phong Shading with no shadow
+// Phong Shader with no shadow
 class PhongShader : public Shader {
 public:
     // 变换矩阵
@@ -87,6 +94,7 @@ public:
     }
 };
 
+// Depth Shader with custom camera
 class DepthShader : public Shader {
 public:
     // 变换矩阵
@@ -115,6 +123,7 @@ public:
     }
 };
 
+// Phong Shader with shadow
 class ShadowShader : public Shader {
 public:
     Matrix mat_model, mat_view, mat_project, mat_viewport;
@@ -182,44 +191,150 @@ public:
     }
 };
 
+// 
+class OcclusionShader : public Shader {
+public:
+    Matrix mat_model, mat_view, mat_viewport;
+    Matrix mat_transform;
+    Matrix mat_transform_depth;
 
-void shading(TGAImage &image, TGAImage &zbuffer, Shader &shader) {
+    TGAImage *depthmap;
+    TGAImage *occlusionmap;
+
+    Vec4f vertexes[3];
+    Vec2f tex_uv[3];
+
+    void computeTranform() {
+        mat_transform = mat_viewport*mat_view*mat_model;
+        // std::cout << mat_transform << std::endl;
+    }
+
+    virtual Vec4f vertex(int nthface, int nthvert) { 
+        vertexes[nthvert] = model->vert(nthface, nthvert);
+        vertexes[nthvert] = mat_transform*vertexes[nthvert];
+        Vec3f tex = model->texCoord(nthface, nthvert);
+        tex_uv[nthvert].x = tex.x * occlusionmap->get_width();
+        tex_uv[nthvert].y = tex.y * occlusionmap->get_height();
+        return vertexes[nthvert]/vertexes[nthvert][3];
+    }
+
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        // 纹理坐标
+        Vec2f uv = tex_uv[0]*bar[0]+tex_uv[1]*bar[1]+tex_uv[2]*bar[2];
+        
+        // gl坐标
+        Vec4f vertex = vertexes[0]*bar[0]+vertexes[1]*bar[1]+vertexes[2]*bar[2];
+
+        // std::cout << "depthmap.z: " << (float)((depthmap->get((int)(vertex.x+.5f), (int)(vertex.y+.5f)))[0]) << std::endl; 
+        // std::cout << "vertex.z: " << vertex.z << std::endl;
+
+        if (std::abs((depthmap->get((int)(vertex.x+.5f), (int)(vertex.y+.5f)))[0]-vertex.z) < 1) {
+            occlusionmap->set((int)(uv.x+.5f), (int)(uv.y+.5f), 255);
+        }
+        color = TGAColor(255, 0, 0);
+        return false;
+
+    }
+};
+
+// 在指定半径的半球上产生随机点
+// 参考链接: https://mathworld.wolfram.com/SpherePointPicking.html
+Vec3f RandInHemisphere() {
+    float u = (float)rand()/(float)RAND_MAX;
+    float v = (float)rand()/(float)RAND_MAX;
+    float theta = 2.f*M_PI*u;
+    float phi   = acos(2.f*v - 1.f);
+    return Vec3f(sin(phi)*cos(theta), sin(phi)*sin(theta), cos(phi));
+}
+
+void shading(TGAImage &image, TGAImage &zbuffer, Shader &shader, Log log) {
     Vec4f screen_coords[3];
-    for (int i=0; i<model->nfaces(); i++) {
+    int nfaces = model->nfaces();
+    for (int i=0; i<nfaces; i++) {
         for (int j=0; j<3; j++) {
             screen_coords[j] = shader.vertex(i, j);
         }
+        
+        if (log.flag) {
+            // std::cout << screen_coords[0] << std::endl;
+            std::cout << "\r" << log.prefix << i*1.0/nfaces*100 << "% completed." << std::flush;
+        }
+
         triangle(screen_coords, shader, image, zbuffer);
+    }
+    if (log.flag) {
+        std::flush(std::cout);
+        std::cout<< "\r" << log.prefix << "100% completed." << std::endl;
     }
 }
 
-void start() {
+// Implementation: Depth Shading
+void DepthShading() {
+    TGAImage image(width, height, TGAImage::GRAYSCALE);
+    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+
+    Vec3f light = light1_dir;
+    Vec3f up(0, 1, 0);
+
+    DepthShader depthShader;
+    depthShader.mat_model = GetModelMatrix();
+    depthShader.mat_view = GetViewMatrix(light, origin, up);
+    depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
+    depthShader.computeTranform();
+    shading(image, zbuffer, depthShader, Log(false, ""));
+
+    // save
+    image.flip_vertically();    // the origin is at the left top cornor of image.
+    image.write_tga_file("output_depth.tga");
+    zbuffer.flip_vertically();
+    zbuffer.write_tga_file("zbuffer.tga");
+}
+
+// Implementation: Phong Shading with no shadow
+void PhongShadingNoShadow() {
+    TGAImage image(width, height, TGAImage::RGB);
+    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+
+    Vec3f light = light1_dir;
+    Vec3f up(0, 1, 0);
+
+    PhongShader phongShader;
+    phongShader.light = light;
+    phongShader.mat_model = GetModelMatrix();
+    phongShader.mat_view = GetViewMatrix(camera, origin, up);
+    phongShader.mat_project = GetProjectMatrix(camera, origin);
+    phongShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
+    phongShader.computeTranform();
+    zbuffer.clear();
+    shading(image, zbuffer, phongShader, Log(false, ""));
+
+    // save
+    image.flip_vertically();    // the origin is at the left top cornor of image.
+    image.write_tga_file("output_depth.tga");
+    zbuffer.flip_vertically();
+    zbuffer.write_tga_file("zbuffer.tga"); 
+}
+
+// Implementation: Phong Shading with hard shadow
+void PhongShadingHardShadow() {
     TGAImage image(width, height, TGAImage::RGB);
     TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
     TGAImage depthmap(width, height, TGAImage::GRAYSCALE);
 
+    Vec3f light = light1_dir;
+    Vec3f up(0, 1, 0);
+
     // Depth Shading
     DepthShader depthShader;
     depthShader.mat_model = GetModelMatrix();
-    depthShader.mat_view = GetViewMatrix(light1_dir, origin, up);
+    depthShader.mat_view = GetViewMatrix(light, origin, up);
     depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
     depthShader.computeTranform();
-    shading(depthmap, zbuffer, depthShader);
-
-    // Phong Shading
-    // PhongShader phongShader;
-    // phongShader.light = light1_dir;
-    // phongShader.mat_model = GetModelMatrix();
-    // phongShader.mat_view = GetViewMatrix(camera, origin, up);
-    // phongShader.mat_project = GetProjectMatrix(camera, origin);
-    // phongShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
-    // phongShader.computeTranform();
-    // zbuffer.clear();
-    // shading(image, zbuffer, phongShader);
+    shading(depthmap, zbuffer, depthShader, Log(false, "")); 
 
     // Shadow Shading
     ShadowShader shadowShader;
-    shadowShader.light = light1_dir;
+    shadowShader.light = light;
     shadowShader.mat_model = GetModelMatrix();
     shadowShader.mat_view = GetViewMatrix(camera, origin, up);
     shadowShader.mat_project = GetProjectMatrix(camera, origin);
@@ -228,23 +343,104 @@ void start() {
     shadowShader.depthmap = &depthmap;
     shadowShader.computeTranform();
     zbuffer.clear();
-    shading(image, zbuffer, shadowShader);
+    shading(image, zbuffer, shadowShader, Log(false, ""));
 
+    // save
+    image.flip_vertically();    // the origin is at the left top cornor of image.
+    image.write_tga_file("output.tga");
+    zbuffer.flip_vertically();
+    zbuffer.write_tga_file("zbuffer.tga");
+    depthmap.flip_vertically();
+    depthmap.write_tga_file("depth.tga");      
+}
 
-    // the origin is at the left top cornor of image.
+// Implementation: AO, Ambient Occlusion
+void AmbientOcclusion() {
+
+    srand((unsigned)time(NULL));
+ 
+    TGAImage image(width, height, TGAImage::RGB);
+    TGAImage depthmap(width, height, TGAImage::RGB);
+    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    TGAImage occlusion(model->getDiffuseMapWidth(), model->getDiffuseMapHeight(), TGAImage::GRAYSCALE);
+    std::vector<std::vector<int>> total(model->getDiffuseMapWidth(), std::vector<int>(model->getDiffuseMapHeight(), 0));
+
+    int sampleNum = 1;
+
+    for (int i = 0; i < sampleNum; ++i) {
+        std::cout << "The " << i << "th Ambient Occlusion rendering: " << std::endl;
+
+        Vec3f light = RandInHemisphere();
+        light.y = std::abs(light.y);
+        Vec3f up;
+        for (int i = 0; i < 3; ++i) up[i] = (float)rand()/(float)RAND_MAX;
+        std::cout << "light: " << light << std::endl;
+
+        image.clear();
+        depthmap.clear();
+        occlusion.clear();
+
+        // The first pass
+        // 生成深度图
+        zbuffer.clear();
+        DepthShader depthShader;
+        depthShader.mat_model = GetModelMatrix();
+        depthShader.mat_view = GetViewMatrix(light, origin, up);
+        depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
+        depthShader.computeTranform();
+
+        shading(depthmap, zbuffer, depthShader, Log(true, "Depth Shading: "));
+
+        // The second pass
+        // 在occlusion上着点
+        OcclusionShader occlusionShader;
+        occlusionShader.mat_model = GetModelMatrix();
+        occlusionShader.mat_view = GetViewMatrix(light, origin, up);
+        occlusionShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
+        occlusionShader.computeTranform();
+        occlusionShader.depthmap = &depthmap;
+        occlusionShader.occlusionmap = &occlusion;
+        zbuffer.clear();
+        shading(image, zbuffer, occlusionShader, Log(true, "Occlusion Shading: "));
+
+        // 加入当前occlusion
+        std::cout << "add to the occlusion" << std::endl;
+        for (int i = 0; i < occlusion.get_width(); ++i) {
+            for (int j = 0; j < occlusion.get_height(); ++j) {
+                // if (occlusion.get(i, j)[0]) {
+                //     std::cout << (int)occlusion.get(i, j)[0] << std::endl;
+                // }
+                total[i][j] += (int)occlusion.get(i, j)[0];
+            }
+        }
+
+        std::cout << std::endl;
+    }
+
+    // average the occlusion image
+    std::cout << "average the occlusion image" << std::endl;
+    for (int i = 0; i < total.size(); ++i) {
+        for (int j = 0; j < total[i].size(); ++j) {
+            // if (total[i][j]) {
+            //     std::cout << total[i][j] << std::endl;
+            // }
+            occlusion.set(i, j, int(total[i][j]*1.0/sampleNum + .5));
+        }
+    }
+
     image.flip_vertically();
     image.write_tga_file("output.tga");
-    // zbuffer.flip_vertically();
-    // zbuffer.write_tga_file("zbuffer.tga");
-    // depthmap.flip_vertically();
-    // depthmap.write_tga_file("depth.tga");
+    occlusion.flip_vertically();
+    occlusion.write_tga_file("occlusion.tga");
+    depthmap.flip_vertically();
+    depthmap.write_tga_file("occlusion_depth.tga");
 }
 
 int main(int argc, char** argv) {
 
-    model = new Model("../obj/african_head.obj");
+    model = new Model("../obj/diablo3_pose.obj");
 
-    start();
+    AmbientOcclusion();
 
     delete model;
     return 0;

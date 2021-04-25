@@ -31,6 +31,9 @@ public:
 	TGAColor diffuse(Vec3f uv);
 	float specular(Vec3f uv);
 	void load_texture(std::string filename, const char *suffix, TGAImage &img);
+
+	int getDiffuseMapWidth();
+	int getDiffuseMapHeight();
 	// void generate_normal_mapping(const char *filename);
 };
 

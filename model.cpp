@@ -113,6 +113,14 @@ void Model::load_texture(std::string filename, const char *suffix, TGAImage &img
     }
 }
 
+int Model::getDiffuseMapWidth() {
+    return diffusemap_.get_width();
+}
+
+int Model::getDiffuseMapHeight() {
+    return diffusemap_.get_height();
+}
+
 // Vec3f barycentric(Vec3f *pts, Vec2f P) {
 //     Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
 //     if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
