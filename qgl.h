@@ -22,7 +22,7 @@ public:
     virtual bool fragment(Vec3f bar, TGAColor &color) = 0;
 };
 
-void triangle(Vec4f *pts, Shader &shader, TGAImage &image, TGAImage &zbuffer);
+void triangle(Vec4f *pts, Shader &shader, TGAImage &image, float *zbuffer);
 
 void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color);
 

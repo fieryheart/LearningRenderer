@@ -105,7 +105,7 @@ public:
     float gl_depth[3];
 
     void computeTranform() {
-        mat_transform = mat_viewport*mat_view*mat_model;
+        mat_transform = mat_viewport*mat_project*mat_view*mat_model;
     }
 
     virtual Vec4f vertex(int nthface, int nthvert) { 
@@ -118,7 +118,7 @@ public:
 
     virtual bool fragment(Vec3f bar, TGAColor &color) {
         int d = (int)(bar[0]*gl_depth[0]+bar[1]*gl_depth[1]+bar[2]*gl_depth[2]);
-        color = TGAColor(d, d, d);
+        color = TGAColor(d, d, d)*255.0f;
         return false;
     }
 };
@@ -191,7 +191,7 @@ public:
     }
 };
 
-// 
+// AO Shader
 class OcclusionShader : public Shader {
 public:
     Matrix mat_model, mat_view, mat_viewport;
@@ -247,7 +247,7 @@ Vec3f RandInHemisphere() {
     return Vec3f(sin(phi)*cos(theta), sin(phi)*sin(theta), cos(phi));
 }
 
-void shading(TGAImage &image, TGAImage &zbuffer, Shader &shader, Log log) {
+void shading(TGAImage &image, float *zbuffer, Shader &shader, Log log) {
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
     for (int i=0; i<nfaces; i++) {
@@ -271,7 +271,9 @@ void shading(TGAImage &image, TGAImage &zbuffer, Shader &shader, Log log) {
 // Implementation: Depth Shading
 void DepthShading() {
     TGAImage image(width, height, TGAImage::GRAYSCALE);
-    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    // TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    float *zbuffer = new float[width*height];
+    std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
 
     Vec3f light = light1_dir;
     Vec3f up(0, 1, 0);
@@ -279,6 +281,7 @@ void DepthShading() {
     DepthShader depthShader;
     depthShader.mat_model = GetModelMatrix();
     depthShader.mat_view = GetViewMatrix(light, origin, up);
+    depthShader.mat_project = Matrix::identity(4);
     depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
     depthShader.computeTranform();
     shading(image, zbuffer, depthShader, Log(false, ""));
@@ -286,14 +289,16 @@ void DepthShading() {
     // save
     image.flip_vertically();    // the origin is at the left top cornor of image.
     image.write_tga_file("output_depth.tga");
-    zbuffer.flip_vertically();
-    zbuffer.write_tga_file("zbuffer.tga");
+    // zbuffer.flip_vertically();
+    // zbuffer.write_tga_file("zbuffer.tga");
+    delete[] zbuffer;
 }
 
 // Implementation: Phong Shading with no shadow
 void PhongShadingNoShadow() {
     TGAImage image(width, height, TGAImage::RGB);
-    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    float *zbuffer = new float[width*height];
+    std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
 
     Vec3f light = light1_dir;
     Vec3f up(0, 1, 0);
@@ -305,21 +310,25 @@ void PhongShadingNoShadow() {
     phongShader.mat_project = GetProjectMatrix(camera, origin);
     phongShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
     phongShader.computeTranform();
-    zbuffer.clear();
+    // zbuffer.clear();
+    std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
     shading(image, zbuffer, phongShader, Log(false, ""));
 
     // save
     image.flip_vertically();    // the origin is at the left top cornor of image.
     image.write_tga_file("output_depth.tga");
-    zbuffer.flip_vertically();
-    zbuffer.write_tga_file("zbuffer.tga"); 
+    // zbuffer.flip_vertically();
+    // zbuffer.write_tga_file("zbuffer.tga"); 
+    delete[] zbuffer;
 }
 
 // Implementation: Phong Shading with hard shadow
 void PhongShadingHardShadow() {
     TGAImage image(width, height, TGAImage::RGB);
-    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    // TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
     TGAImage depthmap(width, height, TGAImage::GRAYSCALE);
+    float *zbuffer = new float[width*height];
+    std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
 
     Vec3f light = light1_dir;
     Vec3f up(0, 1, 0);
@@ -328,6 +337,7 @@ void PhongShadingHardShadow() {
     DepthShader depthShader;
     depthShader.mat_model = GetModelMatrix();
     depthShader.mat_view = GetViewMatrix(light, origin, up);
+    depthShader.mat_project = Matrix::identity(4);
     depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
     depthShader.computeTranform();
     shading(depthmap, zbuffer, depthShader, Log(false, "")); 
@@ -342,16 +352,19 @@ void PhongShadingHardShadow() {
     shadowShader.mat_transform_depth = depthShader.mat_transform;
     shadowShader.depthmap = &depthmap;
     shadowShader.computeTranform();
-    zbuffer.clear();
+    // zbuffer.clear();
+    std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
     shading(image, zbuffer, shadowShader, Log(false, ""));
 
     // save
     image.flip_vertically();    // the origin is at the left top cornor of image.
     image.write_tga_file("output.tga");
-    zbuffer.flip_vertically();
-    zbuffer.write_tga_file("zbuffer.tga");
+    // zbuffer.flip_vertically();
+    // zbuffer.write_tga_file("zbuffer.tga");
     depthmap.flip_vertically();
-    depthmap.write_tga_file("depth.tga");      
+    depthmap.write_tga_file("depth.tga");
+
+    delete zbuffer; 
 }
 
 // Implementation: AO, Ambient Occlusion
@@ -361,9 +374,11 @@ void AmbientOcclusion() {
  
     TGAImage image(width, height, TGAImage::RGB);
     TGAImage depthmap(width, height, TGAImage::RGB);
-    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    // TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
     TGAImage occlusion(model->getDiffuseMapWidth(), model->getDiffuseMapHeight(), TGAImage::GRAYSCALE);
     std::vector<std::vector<int>> total(model->getDiffuseMapWidth(), std::vector<int>(model->getDiffuseMapHeight(), 0));
+    float *zbuffer = new float[width*height];
+    std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
 
     int sampleNum = 1;
 
@@ -382,10 +397,12 @@ void AmbientOcclusion() {
 
         // The first pass
         // 生成深度图
-        zbuffer.clear();
+        // zbuffer.clear();
+        std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
         DepthShader depthShader;
         depthShader.mat_model = GetModelMatrix();
         depthShader.mat_view = GetViewMatrix(light, origin, up);
+        depthShader.mat_project = Matrix::identity(4);
         depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, depth);
         depthShader.computeTranform();
 
@@ -400,7 +417,8 @@ void AmbientOcclusion() {
         occlusionShader.computeTranform();
         occlusionShader.depthmap = &depthmap;
         occlusionShader.occlusionmap = &occlusion;
-        zbuffer.clear();
+        // zbuffer.clear();
+        std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
         shading(image, zbuffer, occlusionShader, Log(true, "Occlusion Shading: "));
 
         // 加入当前occlusion
@@ -434,13 +452,104 @@ void AmbientOcclusion() {
     occlusion.write_tga_file("occlusion.tga");
     depthmap.flip_vertically();
     depthmap.write_tga_file("occlusion_depth.tga");
+
+    delete zbuffer;
+}
+
+float _get_max_slope(float *zbuffer, Vec2f pos, Vec2f dir) {
+    assert(width == height);
+    float max_slope = 0.0f;
+    for (float t = 0; t < 1000.f; t += 1.0f) {
+        Vec2f p = pos + dir*t;
+        if (p.x >= width || p.y >= height || p.x < 0 || p.y < 0) return max_slope;
+        float dis = t;
+        if (dis < 1.f) continue;
+
+        float dh = zbuffer[int(p.x)+width*int(p.y)] - zbuffer[int(pos.x)+width*int(pos.y)];
+        // dh /= 255;
+        max_slope = std::max(max_slope, atanf(dh/dis));
+    }
+    return max_slope;
+}
+
+// float _get_max_slope(float *zbuffer, Vec2f p, Vec2f dir) {
+//     float maxangle = 0;
+//     for (float t=0.; t<1000.; t+=1.) {
+//         Vec2f cur = p + dir*t;
+//         if (cur.x>=width || cur.y>=height || cur.x<0 || cur.y<0) return maxangle;
+
+//         float distance = (p-cur).norm();
+//         if (distance < 1.f) continue;
+//         float elevation = zbuffer[int(cur.x)+int(cur.y)*width]-zbuffer[int(p.x)+int(p.y)*width];
+//         maxangle = std::max(maxangle, atanf(elevation/distance));
+//     }
+//     return maxangle;
+// }
+
+// Implementation: SSAO, Screen Space Ambient Occlusion
+// zbuffer 不能使用int存储，不然会出现明显的分割纹路
+void ScreenSpaceAmbientOcclusion() {
+    TGAImage image(width, height, TGAImage::GRAYSCALE);
+    TGAImage depthmap(width, height, TGAImage::GRAYSCALE);
+    // std::vector<std::vector<float>> zb(width, std::vector<float>(height, 0.0f));
+    float *zbuffer = new float[width*height];
+    std::fill(zbuffer, zbuffer+width*height, -std::numeric_limits<float>::max());
+    
+    // depth shading
+    Vec3f light = light1_dir;
+    Vec3f up(0, 1, 0);
+
+    DepthShader depthShader;
+    depthShader.mat_model = GetModelMatrix();
+    depthShader.mat_view = GetViewMatrix(camera, origin, up);
+    // depthShader.mat_project = Matrix::identity(4);
+    depthShader.mat_project = GetProjectMatrix(camera, origin);
+    depthShader.mat_viewport = GetViewportMatrix(width/8, height/8, width*3/4, width*3/4, 1);
+    depthShader.computeTranform();
+    shading(image, zbuffer, depthShader, Log(true, "Depth Shading: "));
+
+    // post-processing
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            if (zbuffer[i+width*j] < 1e-5) continue;
+            depthmap.set(i, j, (int)(zbuffer[i+width*j]*255));
+            // zbuffer[i+width*j] = (int)(zbuffer[i+width*j]*255);
+        }
+    }
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            if (zbuffer[i+width*j] < 1e-5) continue;
+            float total_slope = 0.0f;
+
+            // case 1e-4 !!! 
+            // 不然会多算一次
+            for (float dir = 0; dir < 2*M_PI-1e-4; dir += M_PI/4) {
+                total_slope += M_PI/2 - _get_max_slope(zbuffer, Vec2f(i, j), Vec2f(sin(dir), cos(dir)));
+            }
+            // for (float dir = 0; dir < 2*M_PI; dir += M_PI/4) {
+            //     total_slope += M_PI/2 - _get_max_slope(zbuffer, Vec2f(i, j), Vec2f(sin(dir), cos(dir)));
+            // }
+            total_slope /= (M_PI/2)*8;
+
+            total_slope = pow(total_slope, 100.f);  // image will be hard to analysis if not do this.
+
+            image.set(i, j, total_slope*255);
+        }
+    }
+
+    image.flip_vertically();
+    image.write_tga_file("output_SSAO.tga");
+    depthmap.flip_vertically();
+    depthmap.write_tga_file("output_depth.tga");
+
+    delete[] zbuffer;
 }
 
 int main(int argc, char** argv) {
 
-    model = new Model("../obj/diablo3_pose.obj");
+    model = new Model("../obj/african_head.obj");
 
-    AmbientOcclusion();
+    ScreenSpaceAmbientOcclusion();
 
     delete model;
     return 0;
