@@ -326,7 +326,7 @@ void ScreenSpaceAmbientOcclusion() {
 
 
 // generate an image
-void renderAImage() {
+void RenderAImage() {
     const int width = 1024;
     const int height = 762;
     std::vector<Vec3f> framebuffer(width*height);
@@ -352,9 +352,91 @@ void renderAImage() {
     // ofs.close();
 }
 
+// Sphere
+struct Sphere {
+    Vec3f center;
+    float radius;
+    Vec3f color;
+
+    Sphere(Vec3f _center, float _radius, Vec3f _color) : center(_center), radius(_radius), color(_color) {}
+
+    /*              
+     *                        · center
+     *                       ··
+     *                     ····  
+     *               c   ······
+     *                 ········  b
+     *                ·········
+     *              ···········
+     *     origin ·············
+     *                   a   
+     */
+    bool intersect(Vec3f &origin, Vec3f &dir, float &t) const {
+        Vec3f vec_c = center - origin;
+        float a = vec_c*dir;
+        float b_2 = vec_c*vec_c - a*a;
+        if (b_2 > radius*radius) return false;
+
+        float d = radius*radius - b_2;
+        t = a - sqrtf(d);
+        if (t < 0) t = a + sqrt(d);
+        if (t < 0) return false;
+        return true;
+    }
+};
+
+Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres) {
+    float min_dis = std::numeric_limits<float>::max();
+    Vec3f color(0.2, 0.7, 0.8);
+    for (auto sphere : spheres) {
+        float dis = std::numeric_limits<float>::max();
+        if (sphere.intersect(origin, dir, dis) && dis < min_dis) {
+            min_dis = dis;
+            color = sphere.color;
+        }
+    }
+
+    return color;
+}
+
+void RenderRayTraceing() {
+    const int width = 1024;
+    const int height = 762;
+    const float fov = M_PI/2;
+    std::vector<Vec3f> framebuffer(width*height);
+    Vec3f origin(0, 0, 0);
+    Sphere sphere1(Vec3f(-3, 0, -8), 2, Vec3f(1.0, 0.0, 0.0));
+    Sphere sphere2(Vec3f(3, 0, -8), 2, Vec3f(0.0, 1.0, 0.0));
+    Sphere sphere3(Vec3f(-1, 0, -6), 1, Vec3f(0.0, 0.0, 1.0));
+    std::vector<Sphere> spheres;
+    spheres.push_back(sphere1);
+    spheres.push_back(sphere2);
+    spheres.push_back(sphere3);
+
+    for (int j = 0; j < height; ++j) {
+        for (int i = 0; i < width; ++i) {
+            float x = (2.0f*(i/(float)width)-1.0f)*tan(fov/2)*width/height;
+            float y = -(2.0f*(j/(float)height)-1.0f)*tan(fov/2);     // y 在数据中向下为正
+            Vec3f dir = (Vec3f(x, y, -1)).normalize();
+            framebuffer[i+j*width] = RayTracing(origin, dir, spheres);
+        }
+    }
+
+    std::string filename = "./out.png";
+
+    auto data = (unsigned char*)malloc(width*height*3);
+    for (int i = 0; i < width*height; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            data[i*3+j] = (unsigned char)(255*std::max(0.0f, std::min(1.0f, framebuffer[i][j])));
+        }
+    }
+    
+    stbi_write_png(filename.c_str(), width, height, 3, data, 0);
+}
+
 int main(int argc, char** argv) {
 
-    renderAImage();
+    RenderRayTraceing();
 
     // model = new Model("../obj/african_head.obj");
 
