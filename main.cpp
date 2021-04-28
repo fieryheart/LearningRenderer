@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include "shaders.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 Model *model = NULL;
 const int width  = 800;
 const int height = 800;
@@ -151,7 +154,7 @@ void PhongShadingHardShadow() {
     depthmap.flip_vertically();
     depthmap.write_tga_file("depth.tga");
 
-    delete zbuffer; 
+    delete[] zbuffer; 
 }
 
 // Implementation: AO, Ambient Occlusion
@@ -242,7 +245,7 @@ void AmbientOcclusion() {
     depthmap.flip_vertically();
     depthmap.write_tga_file("occlusion_depth.tga");
 
-    delete zbuffer;
+    delete[] zbuffer;
 }
 
 float _get_max_slope(float *zbuffer, Vec2f pos, Vec2f dir) {
@@ -321,12 +324,42 @@ void ScreenSpaceAmbientOcclusion() {
     delete[] zbuffer;
 }
 
+
+// generate an image
+void renderAImage() {
+    const int width = 1024;
+    const int height = 762;
+    std::vector<Vec3f> framebuffer(width*height);
+
+    for (int j = 0; j < height; ++j) {
+        for (int i = 0; i < width; ++i) {
+            framebuffer[i+j*width] = Vec3f(j*1.0f/height, i*1.0f/width, 0);
+        }
+    }
+
+    std::string filename = "./out.png";
+    // std::ofstream ofs;
+    // ofs.open("./out.png");
+    auto data = (unsigned char*)malloc(width*height*3);
+    for (int i = 0; i < width*height; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            data[i*3+j] = (unsigned char)(255*std::max(0.0f, std::min(1.0f, framebuffer[i][j])));
+        }
+    }
+    
+    stbi_write_png(filename.c_str(), width, height, 3, data, 0);
+
+    // ofs.close();
+}
+
 int main(int argc, char** argv) {
 
-    model = new Model("../obj/african_head.obj");
+    renderAImage();
 
-    ScreenSpaceAmbientOcclusion();
+    // model = new Model("../obj/african_head.obj");
 
-    delete model;
+    // ScreenSpaceAmbientOcclusion();
+
+    // delete model;
     return 0;
 }
