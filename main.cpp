@@ -229,8 +229,8 @@ void AmbientOcclusion() {
 
     // average the occlusion image
     std::cout << "average the occlusion image" << std::endl;
-    for (int i = 0; i < total.size(); ++i) {
-        for (int j = 0; j < total[i].size(); ++j) {
+    for (int i = 0; i < (int)total.size(); ++i) {
+        for (int j = 0; j < (int)total[i].size(); ++j) {
             // if (total[i][j]) {
             //     std::cout << total[i][j] << std::endl;
             // }
@@ -385,17 +385,45 @@ struct Sphere {
     }
 };
 
-Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres) {
-    float min_dis = std::numeric_limits<float>::max();
+// PointLight
+struct PointLight {
+    Vec3f pos;
+    float intensity;
+    PointLight(Vec3f pos, float intensity) : pos(pos), intensity(intensity) {}
+};
+
+// get the xyz-coordinates of the point
+Vec3f Coord(Vec3f &origin, Vec3f &dir, float t) {
+    return origin + dir*t;
+}
+
+Vec3f RenderLighting(Vec3f &p, Sphere &sphere, std::vector<PointLight> lights) {
+    float intensity = 0.0f;
+    Vec3f N = (p - sphere.center).normalize();
+    for (auto light : lights) {
+        Vec3f dir = (light.pos - p).normalize();
+        float beta = 1.0f;
+        // if (dir*N < 0.5) beta = dir*N;
+        if (dir*N < 1e-5) beta = 0.0f;
+        
+        // float beta = std::max(0.0f, dir*N);
+        if () continue;
+        intensity += beta*light.intensity;
+    }
+    return sphere.color*intensity;
+}
+
+Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres, std::vector<PointLight> lights) {
+    float min_t = std::numeric_limits<float>::max();
     Vec3f color(0.2, 0.7, 0.8);
     for (auto sphere : spheres) {
-        float dis = std::numeric_limits<float>::max();
-        if (sphere.intersect(origin, dir, dis) && dis < min_dis) {
-            min_dis = dis;
-            color = sphere.color;
+        float t = std::numeric_limits<float>::max();
+        if (sphere.intersect(origin, dir, t) && t < min_t) {
+            min_t = t;
+            Vec3f p = Coord(origin, dir, min_t);
+            color = RenderLighting(p, sphere, lights);
         }
     }
-
     return color;
 }
 
@@ -405,20 +433,26 @@ void RenderRayTraceing() {
     const float fov = M_PI/2;
     std::vector<Vec3f> framebuffer(width*height);
     Vec3f origin(0, 0, 0);
-    Sphere sphere1(Vec3f(-3, 0, -8), 2, Vec3f(1.0, 0.0, 0.0));
-    Sphere sphere2(Vec3f(3, 0, -8), 2, Vec3f(0.0, 1.0, 0.0));
-    Sphere sphere3(Vec3f(-1, 0, -6), 1, Vec3f(0.0, 0.0, 1.0));
+    Sphere sphere1(Vec3f(-3, 0, -8), 2, Vec3f(0.4, 0.4, 0.3));
+    Sphere sphere2(Vec3f(3, 0, -8), 2, Vec3f(0.8, 0.6, 0.2));
+    Sphere sphere3(Vec3f(-1, 0, -6), 1, Vec3f(0.5, 0.2, 1.0));
     std::vector<Sphere> spheres;
     spheres.push_back(sphere1);
     spheres.push_back(sphere2);
     spheres.push_back(sphere3);
+
+    PointLight pl0(Vec3f(10, 5, 0), 1.1);
+    PointLight pl1(Vec3f(-5, 20, 0), 1.1);
+    std::vector<PointLight> pls;
+    pls.push_back(pl0);
+    pls.push_back(pl1);
 
     for (int j = 0; j < height; ++j) {
         for (int i = 0; i < width; ++i) {
             float x = (2.0f*(i/(float)width)-1.0f)*tan(fov/2)*width/height;
             float y = -(2.0f*(j/(float)height)-1.0f)*tan(fov/2);     // y 在数据中向下为正
             Vec3f dir = (Vec3f(x, y, -1)).normalize();
-            framebuffer[i+j*width] = RayTracing(origin, dir, spheres);
+            framebuffer[i+j*width] = RayTracing(origin, dir, spheres, pls);
         }
     }
 
