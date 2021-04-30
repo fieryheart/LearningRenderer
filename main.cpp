@@ -397,20 +397,23 @@ Vec3f Coord(Vec3f &origin, Vec3f &dir, float t) {
     return origin + dir*t;
 }
 
-Vec3f RenderLighting(Vec3f &p, Sphere &sphere, std::vector<PointLight> lights) {
-    float intensity = 0.0f;
-    Vec3f N = (p - sphere.center).normalize();
-    for (auto light : lights) {
-        Vec3f dir = (light.pos - p).normalize();
+Vec3f PhongRender(Vec3f &origin, Vec3f &p, Vec3f &N, Sphere &sphere, std::vector<PointLight> lights) {
+    float ambient = 0.005f;
+    Vec3f v = (origin - p).normalize();
+    float diffuse = 0.0f;
+    float specular = 0.0f;
+    for (int i = 0; i < lights.size(); ++i) {
+        Vec3f dir = (lights[i].pos - p).normalize();
         float beta = 1.0f;
-        // if (dir*N < 0.5) beta = dir*N;
-        if (dir*N < 1e-5) beta = 0.0f;
-        
-        // float beta = std::max(0.0f, dir*N);
-        if () continue;
-        intensity += beta*light.intensity;
+        beta = std::max(0.0f, dir*N);
+        diffuse += beta*lights[i].intensity/(lights[i].pos - p).norm();
+
+        // specular
+        Vec3f h = (v + dir).normalize();
+        float a = std::max(0.0f, h*N);
+        specular += std::pow(a, 100.0f)*lights[i].intensity/(lights[i].pos - p).norm();
     }
-    return sphere.color*intensity;
+    return sphere.color * (1.0f * diffuse + 0.6 * specular) + ambient;
 }
 
 Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres, std::vector<PointLight> lights) {
@@ -421,7 +424,8 @@ Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres, std::v
         if (sphere.intersect(origin, dir, t) && t < min_t) {
             min_t = t;
             Vec3f p = Coord(origin, dir, min_t);
-            color = RenderLighting(p, sphere, lights);
+            Vec3f N = (p - sphere.center).normalize();
+            color = PhongRender(origin, p, N, sphere, lights);
         }
     }
     return color;
@@ -441,11 +445,13 @@ void RenderRayTraceing() {
     spheres.push_back(sphere2);
     spheres.push_back(sphere3);
 
-    PointLight pl0(Vec3f(10, 5, 0), 1.1);
-    PointLight pl1(Vec3f(-5, 20, 0), 1.1);
+    PointLight pl0(Vec3f(10, 6, 0), 6);
+    PointLight pl1(Vec3f(-5, 6, 0), 6);
+    PointLight pl2(Vec3f(2, 10, 0), 8);
     std::vector<PointLight> pls;
     pls.push_back(pl0);
     pls.push_back(pl1);
+    pls.push_back(pl2);
 
     for (int j = 0; j < height; ++j) {
         for (int i = 0; i < width; ++i) {
