@@ -357,8 +357,9 @@ struct Sphere {
     Vec3f center;
     float radius;
     Vec3f color;
+    int id;
 
-    Sphere(Vec3f _center, float _radius, Vec3f _color) : center(_center), radius(_radius), color(_color) {}
+    Sphere(Vec3f _center, float _radius, Vec3f _color, int _id) : center(_center), radius(_radius), color(_color), id(_id) {}
 
     /*              
      *                        · center
@@ -397,9 +398,8 @@ Vec3f Coord(Vec3f &origin, Vec3f &dir, float t) {
     return origin + dir*t;
 }
 
-Vec3f PhongRender(Vec3f &origin, Vec3f &p, Vec3f &N, Sphere &sphere, std::vector<PointLight> lights) {
+Vec3f PhongRender(Vec3f &view, Vec3f &p, Vec3f &N, Sphere &sphere, std::vector<PointLight> lights) {
     float ambient = 0.005f;
-    Vec3f v = (origin - p).normalize();
     float diffuse = 0.0f;
     float specular = 0.0f;
     for (int i = 0; i < lights.size(); ++i) {
@@ -409,14 +409,32 @@ Vec3f PhongRender(Vec3f &origin, Vec3f &p, Vec3f &N, Sphere &sphere, std::vector
         diffuse += beta*lights[i].intensity/(lights[i].pos - p).norm();
 
         // specular
-        Vec3f h = (v + dir).normalize();
+        Vec3f h = (view + dir).normalize();
         float a = std::max(0.0f, h*N);
         specular += std::pow(a, 100.0f)*lights[i].intensity/(lights[i].pos - p).norm();
     }
     return sphere.color * (1.0f * diffuse + 0.6 * specular) + ambient;
 }
 
-Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres, std::vector<PointLight> lights) {
+void shadowRender(Vec3f p, std::vector<Sphere> &spheres, std::vector<PointLight> &lights, std::vector<PointLight> &_lights) {
+    for (auto l : lights) {
+        Vec3f origin = p, dir = (l.pos - p).normalize();
+        float t = std::numeric_limits<float>::max();
+        float interFlag = false;
+        for (auto sphere : spheres) {
+            if (sphere.intersect(origin, dir, t)) {
+                interFlag = true;
+                break;
+            }
+        }
+        if (interFlag) continue;
+        _lights.push_back(l);
+    }
+}
+
+
+
+Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres, std::vector<PointLight> &lights) {
     float min_t = std::numeric_limits<float>::max();
     Vec3f color(0.2, 0.7, 0.8);
     for (auto sphere : spheres) {
@@ -425,7 +443,19 @@ Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres, std::v
             min_t = t;
             Vec3f p = Coord(origin, dir, min_t);
             Vec3f N = (p - sphere.center).normalize();
-            color = PhongRender(origin, p, N, sphere, lights);
+            Vec3f view = (origin - p).normalize();
+
+            std::vector<PointLight> _lights;
+
+            // get lights not shadowing
+            /// using N*1e-3 to make point escape from surface.
+            if (view*N < 0) {
+                shadowRender(p-N*1e-3, spheres, lights, _lights);
+            } else {
+                shadowRender(p+N*1e-3, spheres, lights, _lights);
+            }
+            
+            color = PhongRender(view, p, N, sphere, _lights);
         }
     }
     return color;
@@ -437,13 +467,15 @@ void RenderRayTraceing() {
     const float fov = M_PI/2;
     std::vector<Vec3f> framebuffer(width*height);
     Vec3f origin(0, 0, 0);
-    Sphere sphere1(Vec3f(-3, 0, -8), 2, Vec3f(0.4, 0.4, 0.3));
-    Sphere sphere2(Vec3f(3, 0, -8), 2, Vec3f(0.8, 0.6, 0.2));
-    Sphere sphere3(Vec3f(-1, 0, -6), 1, Vec3f(0.5, 0.2, 1.0));
+    Sphere sphere1(Vec3f(-3, 0, -8), 2, Vec3f(0.4, 0.4, 0.3), 1);
+    Sphere sphere2(Vec3f(3, 0, -8), 2, Vec3f(0.8, 0.6, 0.2), 2);
+    Sphere sphere3(Vec3f(-1, 0, -6), 1, Vec3f(0.5, 0.2, 1.0), 3);
+    Sphere sphere4(Vec3f(3, 3, -6), 1, Vec3f(0.6, 0.4, 1.0), 4);
     std::vector<Sphere> spheres;
     spheres.push_back(sphere1);
     spheres.push_back(sphere2);
     spheres.push_back(sphere3);
+    spheres.push_back(sphere4);
 
     PointLight pl0(Vec3f(10, 6, 0), 6);
     PointLight pl1(Vec3f(-5, 6, 0), 6);
