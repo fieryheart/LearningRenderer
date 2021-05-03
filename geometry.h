@@ -43,6 +43,7 @@ template <class t> struct Vec3 {
     Vec3<t> operator +(const t v) const { return Vec3<t>(x+v, y+v, z+v); }
     Vec3<t> operator -(const Vec3<t> &v) const { return Vec3<t>(x-v.x, y-v.y, z-v.z); }
     Vec3<t> operator -(const t v) const { return Vec3<t>(x-v, y-v, z-v); }
+    Vec3<t> operator -() const { return Vec3<t>(-x, -y, -z); }
     Vec3<t> operator *(float f)          const { return Vec3<t>(x*f, y*f, z*f); }
     t       operator *(const Vec3<t> &v) const { return x*v.x + y*v.y + z*v.z; }
     Vec3<t> operator /(float f)          const { return Vec3<t>(x/f, y/f, z/f); }
