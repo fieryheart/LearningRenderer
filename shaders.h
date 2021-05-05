@@ -144,7 +144,7 @@ public:
 
         Vec4f r = (n*(n*l*2.f) - l).normalize();   // reflected light
 
-        float spec = std::pow(std::max(r.z, 0.0f), model->specular(uv));
+        float spec = (std::max(r.z, 0.0f), model->specular(uv));
         float diff = std::max(0.f, n*l);
 
         // 漫反射

@@ -485,17 +485,20 @@ Vec3f RayTracing(Vec3f &origin, Vec3f &dir, std::vector<Sphere> &spheres, std::v
                 }
                 color = color * (1.0f * diffuse+ 0.6 * specular) + ambient;
             } else if (sphere.material == 2) {
-                float r_0 = 0.8;
+                float n1 = 1.0f, n2 = 1.5f;
+                float r_0 = n1/n2;
                 float c_0 = N * view;
                 Vec3f refract_v_0 = (N*(r_0*c_0-sqrtf(1-r_0*r_0*(1-c_0*c_0)))-view*r_0).normalize();
 
                 float dis_0 = sqrtf(1-r_0*r_0*(1-c_0*c_0))*sphere.radius*2;
                 Vec3f p_1 = p + refract_v_0*dis_0;
-                Vec3f N_1 = (p_1-sphere.center).normalize();
-                float p_1_2_sc = (p_1-sphere.center).norm();
-                if (p_1_2_sc<sphere.radius+1e-3) {
-                    p_1 = p_1 + N_1*(sphere.radius-p_1_2_sc+1e-3);
-                }
+                Vec3f N_1 = (sphere.center-p_1).normalize();
+                // float p_1_2_sc = (p_1-sphere.center).norm()-N_1*1e-5;
+                p_1 = p_1 - N_1*1e-5;
+                // if (p_1_2_sc<sphere.radius+1e-5) {
+                //     p_1 = p_1 - N_1*(sphere.radius-p_1_2_sc+1e-5);
+                // }
+                
                 float r_1 = 1.0f/r_0;
                 float c_1 = -N*refract_v_0;
                 Vec3f refract_v_1 = (N_1*(r_1*c_1-sqrtf(1-r_1*r_1*(1-c_1*c_1)))+refract_v_0*r_1).normalize();
@@ -529,8 +532,8 @@ void RenderRayTraceing() {
     const float fov = M_PI/2;
     std::vector<Vec3f> framebuffer(width*height);
     Vec3f origin(0, 0, 0);
-    Sphere sphere1(Vec3f(-3, 0, -8), 2, Vec3f(0.4, 0.4, 0.3), 1, 0);
-    Sphere sphere2(Vec3f(3, 0, -8), 2, Vec3f(0.8, 0.6, 0.2), 2, 0);
+    Sphere sphere1(Vec3f(-3, 0, -10), 2, Vec3f(0.4, 0.4, 0.3), 1, 0);
+    Sphere sphere2(Vec3f(2, 0, -8), 2, Vec3f(0.8, 0.6, 0.2), 2, 0);
     Sphere sphere3(Vec3f(-0.7, 0, -6), 1, Vec3f(0.5, 0.2, 1.0), 3, 2);
     Sphere sphere4(Vec3f(3, 3, -6), 1, Vec3f(0.6, 0.4, 1.0), 4, 1);
     std::vector<Sphere> spheres;
