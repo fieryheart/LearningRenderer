@@ -5,20 +5,21 @@
 #include "objects.h"
 
 // 模型：面 + 纹理A + 纹理B + ...
-// 面：点A + 点B + 点C
-// 点：对象坐标、法向量、纹理坐标
+// 面：点ABC(对象坐标、法向量、纹理坐标)
 class Model {
 private:
-	std::vector<Point*> verts;
-	std::vector<Vec3i> faces;
+	std::vector<Vec3f> verts;
+	std::vector<Vec3f> normals;
+	std::vector<Vec2f> textures;
+	std::vector<QGL::Face> faces;
 public:
 	Model(const char *filename);
-	Model(std::vector<Point*> &_points, std::vector<Vec3i> _faces);
+	Model(std::vector<Vec3f> &_verts, std::vector<QGL::Face> _faces);
 	~Model();
 
 	int nverts();
 	int nfaces();
-	Point* vert(int nthface, int nthvert);
+	Vec3f vert(int nthface, int nthvert);
 };
 // class Model {
 // private:

@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <iostream>
 #include "qgl.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 namespace QGL {
 Matrix MAT_MODEL;   // 模型空间
@@ -10,6 +12,7 @@ Matrix MAT_VIEW;    // 相机空间
 Matrix MAT_PPROJECT; // 透视投影空间
 Matrix MAT_OPROJECT; // 正交投影空间
 Matrix MAT_SCREEN;  // 屏幕空间
+Matrix MAT_TRANS;
 
 void SetModelMat() {
     MAT_MODEL = Matrix::identity(4);
@@ -52,17 +55,37 @@ void SetPerspectiveProjectMat(Vec3f camera, Vec3f origin) {
     MAT_PPROJECT[3][2] = -1.f/(camera-origin).norm();
 }
 
-void SetOrthogonalProjectMat(int w, int h, int depth) {
+void SetOrthogonalProjectMat(int l, int r, int b, int t, int n, int f) {
     MAT_OPROJECT = Matrix::identity(4);
-    MAT_OPROJECT[0][0] = 2.f/w;
-    MAT_OPROJECT[1][1] = 2.f/h;
-    MAT_OPROJECT[2][2] = 2.f/depth;
+    Matrix scale = Matrix::identity(4);
+    scale[0][0] = 2.0f/(r-l);
+    scale[1][1] = 2.0f/(t-b);
+    scale[2][2] = 2.0f/(n-f);
 
-    MAT_OPROJECT[0][3] = -1.0f;
-    MAT_OPROJECT[1][3] = -1.0f;
-    MAT_OPROJECT[2][3] = -1.0f;
+    Matrix traslate = Matrix::identity(4);
+    traslate[0][3] = -(r+l)/2.0f;
+    traslate[1][3] = -(t+b)/2.0f;
+    traslate[2][3] = -(n+f)/2.0f;
+
+    MAT_OPROJECT = scale*traslate*MAT_OPROJECT;
 }
 
+void SetOrthogonalProjectMat(int width, int height, int depth) {
+    MAT_OPROJECT = Matrix::identity(4);
+    Matrix scale = Matrix::identity(4);
+    scale[0][0] = 2.0f/width;
+    scale[1][1] = 2.0f/height;
+    scale[2][2] = 2.0f/depth;
+
+    Matrix traslate = Matrix::identity(4);
+
+    MAT_OPROJECT = scale*traslate*MAT_OPROJECT;
+}
+
+// 计算屏幕坐标
+// x: [-1,1] -> [x,x+w]
+// y: [-1,1] -> [y,y+h]
+// z: [-1,1] -> [0,depth]
 void SetScreenMat(int x, int y, int w, int h, int depth) {
     MAT_SCREEN = Matrix::identity(4);
     MAT_SCREEN[0][0] = w/2.f;
@@ -74,80 +97,100 @@ void SetScreenMat(int x, int y, int w, int h, int depth) {
     MAT_SCREEN[2][3] = depth/2.f;
 }
 
-void SetCamera() {}
+void SetCamera(bool isPercent) {
+    if (isPercent) {
+        MAT_TRANS = MAT_SCREEN*MAT_PPROJECT*MAT_VIEW*MAT_MODEL;
+    } else {
+        MAT_TRANS = MAT_SCREEN*MAT_OPROJECT*MAT_PPROJECT*MAT_VIEW*MAT_MODEL;
+    }
+    
+}
 
-void Rasterizer(Model *model, Shader &shader, Frame *frame) {
+Vec3f barycentric(Vec4f *pts, Vec2f P) {
+    Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
+    if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
+    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+}
+
+void Rendering(Model *model, Shader &shader, Frame &frame) {
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
     for (int i = 0; i < nfaces; ++i) {
         for (int j = 0; j < 3; ++j) {
-            Point *p = model->vert(i, j);
-            screen_coords[j] = shader.vertex(p);
+            Vec3f v = model->vert(i, j);
+            InVectex inV;
+            inV.v = v;
+            inV.index = j;
+            OutVectex outV;
+            shader.vertex(inV, outV);
+            screen_coords[j] = outV.sCoord;
+            std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
         }
-        DrawTriangle(screen_coords, shader);
+        DrawTriangle(screen_coords, shader, frame);
     }
 }
 
-void DrawTriangle(Vec4f *points, Shader &shader) {
+void DrawTriangle(Vec4f *points, Shader &shader, Frame &frame) {
+    int width = frame.width, height = frame.height;
+    Vec2f bboxmin(width-1, height-1);
+    Vec2f bboxmax(0, 0);
+    Vec2f clamp(width-1, height-1); 
+    for (int i=0; i<3; i++) { 
+        bboxmin.x = std::min(bboxmin.x, points[i].x);
+        bboxmin.y = std::min(bboxmin.y, points[i].y);
+        bboxmax.x = std::max(bboxmax.x, points[i].x);
+        bboxmax.y = std::max(bboxmax.y, points[i].y);
+    }
+    bboxmin.x = std::min(0.f, bboxmin.x);
+    bboxmin.y = std::min(0.f, bboxmin.y);
+    bboxmax.x = std::max(clamp.x, bboxmax.x);
+    bboxmax.y = std::max(clamp.y, bboxmax.y);
 
+    Vec2i P;
+    for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
+        for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
+            Vec3f bc = barycentric(points, Vec2f(P.x, P.y));
+            // float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
+            // float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
+            // float depth = std::max(0.f, std::min(1.0f, z/w));
+            // if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer[P.x+iwidth*P.y] > z) continue;
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
+            InFragment in;
+            OutFragment out;
+            in.bar = bc;
+            if (!shader.fragment(in, out)) {
+                // zbuffer.set(P.x, P.y, depth);
+                // zbuffer[P.x+iwidth*P.y] = z;
+                frame.set(P.x, P.y, out.color);
+            }
+        }
+    }
+}
+
+// 绘制该帧
+void DrawFrame(Frame &frame, const char *filename) {
+    int width = frame.width, height = frame.height;
+    auto data = (unsigned char*)malloc(width*height*3);
+    for (int i = 0; i < width*height; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            data[i*3+j] = (unsigned char)(255*std::max(0.0f, std::min(1.0f, frame.buffer[i][j])));
+        }
+    }
+    stbi_write_png(filename, width, height, 3, data, 0);
+}
+
+void FlipFrame(Frame &frame) {
+    int width = frame.width, height = frame.height;
+    for (int i = 0; i < height / 2; ++i) {
+        for (int j = 0; j < width; ++j) {
+            Vec3f t = frame.buffer[j+width*i];
+            frame.buffer[j+width*i] = frame.buffer[j+width*(height-1-i)];
+            frame.buffer[j+width*(height-1-i)] = t;
+        }
+    }
 }
 }
 
-
-
-
-
-
-
-// Shader::~Shader() {}
-
-// // 计算模型的 scalings rotations translations
-// Matrix GetModelMatrix() {
-//     Matrix mat = Matrix::identity(4);
-//     return mat;
-// }
-
-// // 计算相机空间下的 模型坐标
-// Matrix GetViewMatrix(Vec3f eye, Vec3f center, Vec3f up) {
-//     Vec3f z = (eye - center).normalize();
-//     Vec3f x = (up^z).normalize();
-//     Vec3f y = (z^x).normalize();
-//     Matrix viewMatrix = Matrix::identity(4);
-//     Matrix mat = Matrix::identity(4);
-//     for (int i = 0; i < 3; ++i) {
-//         viewMatrix[0][i] = x[i];
-//         viewMatrix[1][i] = y[i];
-//         viewMatrix[2][i] = z[i];
-
-//         mat[i][3] = -center[i];
-//     }
-    
-//     return viewMatrix*mat;
-// }
-
-// // 计算投影坐标
-// Matrix GetProjectMatrix(Vec3f camera, Vec3f origin) {
-//     // 透视投影
-//     Matrix mat = Matrix::identity(4);
-//     mat[3][2] = -1.f/(camera-origin).norm();
-//     return mat;
-// }
-
-// // 计算屏幕坐标
-// // x: [-1,1] -> [x,x+w]
-// // y: [-1,1] -> [y,y+h]
-// // z: [-1,1] -> [0,depth]
-// Matrix GetViewportMatrix(int x, int y, int w, int h, int depth) {
-//     Matrix mat = Matrix::identity(4);
-//     mat[0][0] = w/2.f;
-//     mat[1][1] = h/2.f;
-//     mat[2][2] = depth/2.f;
-
-//     mat[0][3] = x+w/2.f;
-//     mat[1][3] = y+h/2.f;
-//     mat[2][3] = depth/2.f;
-//     return mat;
-// }
 
 // // 重心坐标计算
 // Vec3f barycentric(Vec4f *pts, Vec2f P) {

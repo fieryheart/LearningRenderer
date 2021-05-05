@@ -3,35 +3,22 @@
 
 #include "geometry.h"
 
+namespace QGL {
 // 
 class Object {
 public:
     virtual ~Object() {};
 };
 
-// 点：对象坐标、法向量、纹理坐标
-class Point : public Object {
-private:
-    Vec3f coordinate;
-    Vec3f normal;
-    Vec2f uv;
-public:
-    Point(){}
-    ~Point(){}
-    Point(Vec3f &p) : coordinate(p) {}
-    Point(Vec3f &p, Vec3f &n) : coordinate(p), normal(n) {}
-    Point(Vec3f &p, Vec3f &n, Vec2f &u) : coordinate(p), normal(n), uv(u) {}
-    Point(Vec3f p) : coordinate(p) {}
-    Point(Vec3f p, Vec3f n) : coordinate(p), normal(n) {}
-    Point(Vec3f p, Vec3f n, Vec2f u) : coordinate(p), normal(n), uv(u) {}
-
-    // get && set
-    Vec3f getCoordinate() {return coordinate;}
-    Vec3f getNormal() {return normal;}
-    Vec2f getUV() {return uv;}
-    void setCoordinate(Vec3f &p) {coordinate = p;}
-    void setNormal(Vec3f &n) {normal = n;}
-    void setUV(Vec2f &u) {uv = u;}
+// 面：对象坐标、法向量、纹理坐标
+struct Face {
+    Vec3i v;
+    Vec3i vn;
+    Vec3i vt;
+    Face(){}
+    Face(Vec3i v) : v(v){}
+    Face(Vec3i v, Vec3i vn) : v(v), vn(vn){}
+    Face(Vec3i v, Vec3i vn, Vec3i vt) : v(v), vn(vn), vt(vt){}
 };
 
 // 三角形：点、法向量
@@ -66,5 +53,5 @@ public:
 
 // public:
 // };
-
+}
 #endif // __OBJECTS_H__

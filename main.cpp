@@ -6,17 +6,14 @@
 // #include "shaders.h"
 #include "qgl.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 Model *model = NULL;
 const int width  = 800;
 const int height = 800;
 const int depth = 255;  // 根据深度值 计算颜色
 const Vec3f light1_dir(1,1,1);
-const Vec3f camera(1,1,10);
+const Vec3f camera(0,0,1);
 const Vec3f origin(0,0,0);
-// const Vec3f up(0,1,0);
+const Vec3f up(0,1,0);
 
 int main(int argc, char** argv) {
 
@@ -28,23 +25,41 @@ int main(int argc, char** argv) {
 
     // delete model;
 
-    Point *A = new Point(Vec3f{1.0f, 0.0f, 0.0f});
-    Point *B = new Point(Vec3f{0.0f, 1.0f, 0.0f});
-    Point *C = new Point(Vec3f{0.0f, 0.0f, 1.0f});
-    std::vector<Point*> points{A, B, C};
+    Vec3f A = Vec3f(100.0f, 0.0f, 0.0f);
+    Vec3f B = Vec3f(-100.0f, 0.0f, 0.0f);
+    Vec3f C = Vec3f(0.0f, 100.0f, 0.0f);
+    std::vector<Vec3f> verts{A, B, C};
     
-    Vec3i face{0, 1, 2};
-    std::vector<Vec3i> faces{face};
+    QGL::Face face = QGL::Face(Vec3i(0, 1, 2));
+    std::vector<QGL::Face> faces{face};
 
-    model = new Model(points, faces);
+    model = new Model(verts, faces);
 
-    QGL::SetCamera();
+    std::cout << "set camera." << std::endl;
+    QGL::SetModelMat();
+    QGL::SetViewMat(camera, origin, up);
+    QGL::SetPerspectiveProjectMat(camera, origin);
+    QGL::SetOrthogonalProjectMat(width, height, depth);
+    QGL::SetScreenMat(0, 0, width, height, depth);
+    QGL::SetCamera(false);
+    std::cout << "QGL::MAT_OPROJECT" << std::endl;
+    std::cout << QGL::MAT_OPROJECT << std::endl;
 
-    delete A;
-    delete B;
-    delete C;
+    std::cout << "set testShader." << std::endl;
+    QGL::TestShader testShader = QGL::TestShader();
+    testShader.uniform_mat_transform = QGL::MAT_TRANS;
+
+    QGL::Frame frame = QGL::Frame(width, height);
+
+    std::cout << "do the Rasterizer." << std::endl;
+    QGL::Rendering(model, testShader, frame);
+
+    std::cout << "draw frame." << std::endl;
+    std::string result = "../example/out.png";
+    QGL::FlipFrame(frame);
+    QGL::DrawFrame(frame, result.c_str());
+
     delete model;
-
     return 0;
 }
 

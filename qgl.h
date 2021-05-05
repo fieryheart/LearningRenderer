@@ -8,9 +8,12 @@ namespace QGL {
 struct Frame {
     int width;
     int height;
-    std::vector<float> buffer;
+    std::vector<Vec3f> buffer;
     Frame(int w, int h) : width(h), height(h) {
-        buffer = std::vector<float>(w*h, 0.0f);
+        buffer = std::vector<Vec3f>(w*h, Vec3f(0.0f, 0.0f, 0.0f));
+    }
+    void set(int i, int j, Vec3f color) {
+        buffer[i+width*j] = color;
     }
 };
 
@@ -19,21 +22,29 @@ extern Matrix MAT_VIEW;    // 相机空间
 extern Matrix MAT_PPROJECT; // 透视投影空间
 extern Matrix MAT_OPROJECT; // 正交投影空间
 extern Matrix MAT_SCREEN;  // 屏幕空间
+extern Matrix MAT_TRANS;
 
 void SetModelMat();
 void SetViewMat(Vec3f eye, Vec3f center, Vec3f up);
 void LookAt(Vec3f eye, Vec3f center, Vec3f up);  // the same as SetViewMat.
 void SetPerspectiveProjectMat(Vec3f camera, Vec3f origin);
-void SetOrthogonalProjectMat();
+void SetOrthogonalProjectMat(int l, int r, int b, int t, int n, int f);
+void SetOrthogonalProjectMat(int w, int h, int depth);
 void SetScreenMat(int x, int y, int w, int h, int depth);
 
 // 设置相机
-void SetCamera();
+void SetCamera(bool isPercent);
+
+Vec3f barycentric(Vec4f *pts, Vec2f P);
 
 // 模型光栅化
-void Rasterizer(Model *model);
+void Rendering(Model *model, Shader &shader, Frame &frame);
 
-void DrawTriangle(Vec4f *points, Shader &shader);
+void DrawTriangle(Vec4f *points, Shader &shader, Frame &frame);
+
+void DrawFrame(Frame &frame, const char *filename);
+
+void FlipFrame(Frame &frame);
 }
 
 

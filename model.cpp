@@ -56,8 +56,8 @@ Model::Model(const char *filename) {
 
 }
 
-Model::Model(std::vector<Point*> &_points, std::vector<Vec3i> _faces) {
-    verts = _points;
+Model::Model(std::vector<Vec3f> &_verts, std::vector<QGL::Face> _faces) {
+    verts = _verts;
     faces = _faces;
 }
 
@@ -72,8 +72,8 @@ int Model::nfaces() {
     return (int)faces.size();
 }
 
-Point* Model::vert(int nthface, int nthvert) {
-    return verts[faces[nthface][nthvert]];
+Vec3f Model::vert(int nthface, int nthvert) {
+    return verts[faces[nthface].v[nthvert]];
 }
 
 // int Model::nverts() {

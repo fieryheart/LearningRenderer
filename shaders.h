@@ -2,26 +2,53 @@
 #define __SHADERS_H__
 #include "objects.h"
 
+namespace QGL {
+struct InVectex {
+    Vec3f v;
+    int index;
+    InVectex(){}
+    InVectex(Vec3f v, int index) : v(v), index(index) {}
+};
+
+struct OutVectex {
+    Vec4f sCoord;   // 屏幕坐标
+    OutVectex(){}
+};
+
+struct InFragment {
+    Vec3f bar;
+    InFragment(){}
+};
+
+struct OutFragment {
+    Vec3f color;
+    OutFragment(){}
+};
+
 class Shader {
 public:
-    virtual ~Shader();
-    virtual Vec4f vertex(Point *p) = 0;
-    virtual Vec4f vertex(Point *p, int j) = 0;
-    virtual bool fragment(Vec3f bar, Vec3f &color) = 0;
+    virtual ~Shader() {};
+    virtual bool vertex(InVectex in, OutVectex &out) = 0;
+    virtual bool fragment(InFragment in, OutFragment &out) = 0;
 };
 
 class TestShader : public Shader {
 public:
     Matrix uniform_mat_transform;
-    virtual Vec4f vertex(Point *p) {
-        Vec4f vertex = Vec4f(p->getCoordinate(),1.0f);
-        return uniform_mat_transform*vertex;
+    virtual bool vertex(InVectex in, OutVectex &out) {
+        Vec4f vertex = Vec4f(in.v, 1.0f);
+        vertex = uniform_mat_transform*vertex;
+        vertex = vertex / vertex.w;
+        out.sCoord = vertex;
     }
 
-    virtual bool fragment(Vec3f bar, Vec3f &color) {
-        color = Vec3f(1.0f, 0.0f, 0.0f);
+    virtual bool fragment(InFragment in, OutFragment &out) {
+        out.color = Vec3f(1.0f, 0.0f, 0.0f);
+        return false;
     }
 };
+}
+
 
 // class GouraudShader : public Shader {
 // public:
