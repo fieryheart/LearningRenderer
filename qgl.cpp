@@ -4,16 +4,18 @@
 #include <iostream>
 #include "qgl.h"
 
-Shader::~Shader() {}
+namespace QGL {
+Matrix MAT_MODEL;   // 模型空间
+Matrix MAT_VIEW;    // 相机空间
+Matrix MAT_PPROJECT; // 透视投影空间
+Matrix MAT_OPROJECT; // 正交投影空间
+Matrix MAT_SCREEN;  // 屏幕空间
 
-// 计算模型的 scalings rotations translations
-Matrix GetModelMatrix() {
-    Matrix mat = Matrix::identity(4);
-    return mat;
+void SetModelMat() {
+    MAT_MODEL = Matrix::identity(4);
 }
 
-// 计算相机空间下的 模型坐标
-Matrix GetViewMatrix(Vec3f eye, Vec3f center, Vec3f up) {
+void SetViewMat(Vec3f eye, Vec3f center, Vec3f up) {
     Vec3f z = (eye - center).normalize();
     Vec3f x = (up^z).normalize();
     Vec3f y = (z^x).normalize();
@@ -26,127 +28,220 @@ Matrix GetViewMatrix(Vec3f eye, Vec3f center, Vec3f up) {
 
         mat[i][3] = -center[i];
     }
-    
-    return viewMatrix*mat;
+    MAT_VIEW = viewMatrix*mat;
 }
 
-// 计算投影坐标
-Matrix GetProjectMatrix(Vec3f camera, Vec3f origin) {
-    // 透视投影
+void LookAt(Vec3f eye, Vec3f center, Vec3f up) {
+    Vec3f z = (eye - center).normalize();
+    Vec3f x = (up^z).normalize();
+    Vec3f y = (z^x).normalize();
+    Matrix viewMatrix = Matrix::identity(4);
     Matrix mat = Matrix::identity(4);
-    mat[3][2] = -1.f/(camera-origin).norm();
-    return mat;
-}
+    for (int i = 0; i < 3; ++i) {
+        viewMatrix[0][i] = x[i];
+        viewMatrix[1][i] = y[i];
+        viewMatrix[2][i] = z[i];
 
-// 计算屏幕坐标
-// x: [-1,1] -> [x,x+w]
-// y: [-1,1] -> [y,y+h]
-// z: [-1,1] -> [0,depth]
-Matrix GetViewportMatrix(int x, int y, int w, int h, int depth) {
-    Matrix mat = Matrix::identity(4);
-    mat[0][0] = w/2.f;
-    mat[1][1] = h/2.f;
-    mat[2][2] = depth/2.f;
-
-    mat[0][3] = x+w/2.f;
-    mat[1][3] = y+h/2.f;
-    mat[2][3] = depth/2.f;
-    return mat;
-}
-
-// 重心坐标计算
-Vec3f barycentric(Vec4f *pts, Vec2f P) {
-    Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
-    if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
-    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
-}
-
-/* 
- *  作用：根据 给定点ABC 绘制三角形。
- *  参数：
- *      pts: 点 ABC 坐标
- *      shader: 该三角形的shader类型
- *      image: TGA图片对象
- *      zbuffer: z-buffer数据
- *  返回：无
- */
-void triangle(Vec4f *pts, Shader &shader, TGAImage &image, float *zbuffer) {
-    int iwidth = image.get_width(), iheight = image.get_height();
-    Vec2f bboxmin(iwidth-1,  iheight-1); 
-    Vec2f bboxmax(0, 0); 
-    Vec2f clamp(iwidth-1, iheight-1); 
-    for (int i=0; i<3; i++) { 
-        bboxmin.x = std::min(bboxmin.x, pts[i].x);
-        bboxmin.y = std::min(bboxmin.y, pts[i].y);
-        bboxmax.x = std::max(bboxmax.x, pts[i].x);
-        bboxmax.y = std::max(bboxmax.y, pts[i].y);
+        mat[i][3] = -center[i];
     }
-    bboxmin.x = std::min(0.f, bboxmin.x);
-    bboxmin.y = std::min(0.f, bboxmin.y);
-    bboxmax.x = std::max(clamp.x, bboxmax.x);
-    bboxmax.y = std::max(clamp.y, bboxmax.y);
+    MAT_VIEW = viewMatrix*mat;
+}
 
-    Vec2i P;
-    TGAColor color;
-    for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
-        for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
-            Vec3f bc = barycentric(pts, Vec2f(P.x, P.y));
-            float z = pts[0][2]*bc.x+pts[1][2]*bc.y+pts[2][2]*bc.z;
-            float w = pts[0][3]*bc.x+pts[1][3]*bc.y+pts[2][3]*bc.z;
-            // int depth = std::max(0, std::min(255, int(z/w+.5f)));
-            // float depth = std::max(0.f, std::min(1.0f, z/w));
-            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer[P.x+iwidth*P.y] > z) continue;
-            if (!shader.fragment(bc, color)) {
-                // zbuffer.set(P.x, P.y, depth);
-                zbuffer[P.x+iwidth*P.y] = z;
-                image.set(P.x, P.y, color);
-            }
+void SetPerspectiveProjectMat(Vec3f camera, Vec3f origin) {
+    MAT_PPROJECT = Matrix::identity(4);
+    MAT_PPROJECT[3][2] = -1.f/(camera-origin).norm();
+}
+
+void SetOrthogonalProjectMat(int w, int h, int depth) {
+    MAT_OPROJECT = Matrix::identity(4);
+    MAT_OPROJECT[0][0] = 2.f/w;
+    MAT_OPROJECT[1][1] = 2.f/h;
+    MAT_OPROJECT[2][2] = 2.f/depth;
+
+    MAT_OPROJECT[0][3] = -1.0f;
+    MAT_OPROJECT[1][3] = -1.0f;
+    MAT_OPROJECT[2][3] = -1.0f;
+}
+
+void SetScreenMat(int x, int y, int w, int h, int depth) {
+    MAT_SCREEN = Matrix::identity(4);
+    MAT_SCREEN[0][0] = w/2.f;
+    MAT_SCREEN[1][1] = h/2.f;
+    MAT_SCREEN[2][2] = depth/2.f;
+
+    MAT_SCREEN[0][3] = x+w/2.f;
+    MAT_SCREEN[1][3] = y+h/2.f;
+    MAT_SCREEN[2][3] = depth/2.f;
+}
+
+void SetCamera() {}
+
+void Rasterizer(Model *model, Shader &shader, Frame *frame) {
+    Vec4f screen_coords[3];
+    int nfaces = model->nfaces();
+    for (int i = 0; i < nfaces; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            Point *p = model->vert(i, j);
+            screen_coords[j] = shader.vertex(p);
         }
+        DrawTriangle(screen_coords, shader);
     }
 }
 
+void DrawTriangle(Vec4f *points, Shader &shader) {
 
-/* 
- *  作用：根据 点A 和 点B 画线。
- *  参数：
- *      x0: 点A的x值
- *      y0: 点A的y值
- *      x1: 点B的x值
- *      y1: 点B的y值
- *      image: TGA图片对象
- *      color: TGA颜色
- *  返回：无
- */
-void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) {
-    int x0 = p0.x, y0 = p0.y, x1 = p1.x, y1 = p1.y;
-    bool steep = false; 
-    if (std::abs(x0-x1)<std::abs(y0-y1)) { 
-        std::swap(x0, y0); 
-        std::swap(x1, y1); 
-        steep = true; 
-    } 
-    if (x0>x1) { 
-        std::swap(x0, x1); 
-        std::swap(y0, y1); 
-    } 
-    int dx = x1-x0; 
-    int dy = y1-y0; 
-    int derror2 = std::abs(dy)*2; 
-    int error2 = 0; 
-    int y = y0; 
-    for (int x=x0; x<=x1; x++) { 
-        if (steep) {
-            image.set(y, x, color); 
-        } else { 
-            image.set(x, y, color); 
-        } 
-        error2 += derror2; 
-        if (error2 > dx) { 
-            y += (y1>y0?1:-1); 
-            error2 -= dx*2; 
-        } 
-    }     
 }
+}
+
+
+
+
+
+
+
+// Shader::~Shader() {}
+
+// // 计算模型的 scalings rotations translations
+// Matrix GetModelMatrix() {
+//     Matrix mat = Matrix::identity(4);
+//     return mat;
+// }
+
+// // 计算相机空间下的 模型坐标
+// Matrix GetViewMatrix(Vec3f eye, Vec3f center, Vec3f up) {
+//     Vec3f z = (eye - center).normalize();
+//     Vec3f x = (up^z).normalize();
+//     Vec3f y = (z^x).normalize();
+//     Matrix viewMatrix = Matrix::identity(4);
+//     Matrix mat = Matrix::identity(4);
+//     for (int i = 0; i < 3; ++i) {
+//         viewMatrix[0][i] = x[i];
+//         viewMatrix[1][i] = y[i];
+//         viewMatrix[2][i] = z[i];
+
+//         mat[i][3] = -center[i];
+//     }
+    
+//     return viewMatrix*mat;
+// }
+
+// // 计算投影坐标
+// Matrix GetProjectMatrix(Vec3f camera, Vec3f origin) {
+//     // 透视投影
+//     Matrix mat = Matrix::identity(4);
+//     mat[3][2] = -1.f/(camera-origin).norm();
+//     return mat;
+// }
+
+// // 计算屏幕坐标
+// // x: [-1,1] -> [x,x+w]
+// // y: [-1,1] -> [y,y+h]
+// // z: [-1,1] -> [0,depth]
+// Matrix GetViewportMatrix(int x, int y, int w, int h, int depth) {
+//     Matrix mat = Matrix::identity(4);
+//     mat[0][0] = w/2.f;
+//     mat[1][1] = h/2.f;
+//     mat[2][2] = depth/2.f;
+
+//     mat[0][3] = x+w/2.f;
+//     mat[1][3] = y+h/2.f;
+//     mat[2][3] = depth/2.f;
+//     return mat;
+// }
+
+// // 重心坐标计算
+// Vec3f barycentric(Vec4f *pts, Vec2f P) {
+//     Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
+//     if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
+//     return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+// }
+
+// /* 
+//  *  作用：根据 给定点ABC 绘制三角形。
+//  *  参数：
+//  *      pts: 点 ABC 坐标
+//  *      shader: 该三角形的shader类型
+//  *      image: TGA图片对象
+//  *      zbuffer: z-buffer数据
+//  *  返回：无
+//  */
+// void triangle(Vec4f *pts, Shader &shader, TGAImage &image, float *zbuffer) {
+//     int iwidth = image.get_width(), iheight = image.get_height();
+//     Vec2f bboxmin(iwidth-1,  iheight-1); 
+//     Vec2f bboxmax(0, 0); 
+//     Vec2f clamp(iwidth-1, iheight-1); 
+//     for (int i=0; i<3; i++) { 
+//         bboxmin.x = std::min(bboxmin.x, pts[i].x);
+//         bboxmin.y = std::min(bboxmin.y, pts[i].y);
+//         bboxmax.x = std::max(bboxmax.x, pts[i].x);
+//         bboxmax.y = std::max(bboxmax.y, pts[i].y);
+//     }
+//     bboxmin.x = std::min(0.f, bboxmin.x);
+//     bboxmin.y = std::min(0.f, bboxmin.y);
+//     bboxmax.x = std::max(clamp.x, bboxmax.x);
+//     bboxmax.y = std::max(clamp.y, bboxmax.y);
+
+//     Vec2i P;
+//     TGAColor color;
+//     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
+//         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
+//             Vec3f bc = barycentric(pts, Vec2f(P.x, P.y));
+//             float z = pts[0][2]*bc.x+pts[1][2]*bc.y+pts[2][2]*bc.z;
+//             float w = pts[0][3]*bc.x+pts[1][3]*bc.y+pts[2][3]*bc.z;
+//             // int depth = std::max(0, std::min(255, int(z/w+.5f)));
+//             // float depth = std::max(0.f, std::min(1.0f, z/w));
+//             if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer[P.x+iwidth*P.y] > z) continue;
+//             if (!shader.fragment(bc, color)) {
+//                 // zbuffer.set(P.x, P.y, depth);
+//                 zbuffer[P.x+iwidth*P.y] = z;
+//                 image.set(P.x, P.y, color);
+//             }
+//         }
+//     }
+// }
+
+
+// /* 
+//  *  作用：根据 点A 和 点B 画线。
+//  *  参数：
+//  *      x0: 点A的x值
+//  *      y0: 点A的y值
+//  *      x1: 点B的x值
+//  *      y1: 点B的y值
+//  *      image: TGA图片对象
+//  *      color: TGA颜色
+//  *  返回：无
+//  */
+// void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) {
+//     int x0 = p0.x, y0 = p0.y, x1 = p1.x, y1 = p1.y;
+//     bool steep = false; 
+//     if (std::abs(x0-x1)<std::abs(y0-y1)) { 
+//         std::swap(x0, y0); 
+//         std::swap(x1, y1); 
+//         steep = true; 
+//     } 
+//     if (x0>x1) { 
+//         std::swap(x0, x1); 
+//         std::swap(y0, y1); 
+//     } 
+//     int dx = x1-x0; 
+//     int dy = y1-y0; 
+//     int derror2 = std::abs(dy)*2; 
+//     int error2 = 0; 
+//     int y = y0; 
+//     for (int x=x0; x<=x1; x++) { 
+//         if (steep) {
+//             image.set(y, x, color); 
+//         } else { 
+//             image.set(x, y, color); 
+//         } 
+//         error2 += derror2; 
+//         if (error2 > dx) { 
+//             y += (y1>y0?1:-1); 
+//             error2 -= dx*2; 
+//         } 
+//     }     
+// }
 
 /*
 
