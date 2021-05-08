@@ -78,6 +78,54 @@ Vec3f Model::vert(int nthface, int nthvert) {
     return verts[faces[nthface].v[nthvert]];
 }
 
+// 将节点归一化
+void Model::vertsNormalize() {
+    if (verts.empty()) {
+        std::cout << "verts of model is empty." << std::endl;
+        return;
+    }
+
+    Vec3f minV = Vec3f(std::numeric_limits<float>::max(),
+                       std::numeric_limits<float>::max(),
+                       std::numeric_limits<float>::max());
+    Vec3f maxV = Vec3f(std::numeric_limits<float>::min(),
+                       std::numeric_limits<float>::min(),
+                       std::numeric_limits<float>::min());
+
+    for (auto &v : verts) {
+        minV[0] = std::min(minV[0], v[0]);
+        minV[1] = std::min(minV[1], v[1]);
+        minV[2] = std::min(minV[2], v[2]);
+
+        maxV[0] = std::max(maxV[0], v[0]);
+        maxV[1] = std::max(maxV[1], v[1]);
+        maxV[2] = std::max(maxV[2], v[2]);
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        minV[i] = std::floor(minV[i]);
+        maxV[i] = std::ceil(maxV[i]);
+    }
+
+    // std::cout << "minV : " << minV;
+    // std::cout << "maxV : " << maxV;
+
+    float l = minV[0], r = maxV[0];
+    float b = minV[1], t = maxV[1];
+    float n = minV[2], f = maxV[2];
+
+    float scaleN = std::min(l, std::max(b, n));
+    float scaleP = std::max(r, std::max(t, f));
+    // std::cout << "(scaleN, scaleP) : " << scaleN << ", " << scaleP << std::endl;
+
+    float scale = std::max(std::abs(scaleN), std::abs(scaleP));
+    // std::cout << "scale : " << scale << std::endl;
+
+    for (auto &v : verts) {
+        v = v / scale;
+    }
+}
+
 // int Model::nverts() {
 //     return (int)verts_.size();
 // }

@@ -20,6 +20,7 @@ public:
 	int nverts();
 	int nfaces();
 	Vec3f vert(int nthface, int nthvert);
+	void vertsNormalize();
 };
 // class Model {
 // private:

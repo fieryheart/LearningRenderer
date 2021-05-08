@@ -5,16 +5,12 @@
 #include "shaders.h"
 
 namespace QGL {
-struct Frame {
-    int width;
-    int height;
-    std::vector<Vec3f> buffer;
-    Frame(int w, int h) : width(h), height(h) {
-        buffer = std::vector<Vec3f>(w*h, Vec3f(0.0f, 0.0f, 0.0f));
-    }
-    void set(int i, int j, Vec3f color) {
-        buffer[i+width*j] = color;
-    }
+struct RenderNode {
+    Model *model;
+    Shader *shader;
+    Frame *frame;
+    Zbuffer *zbuffer;
+    RenderNode() {}
 };
 
 extern Matrix MAT_MODEL;   // 模型空间
@@ -38,9 +34,9 @@ void SetCamera(bool isPercent);
 Vec3f barycentric(Vec4f *pts, Vec2f P);
 
 // 模型光栅化
-void Rendering(Model *model, Shader &shader, Frame &frame);
+void Rendering(RenderNode &rn);
 
-void DrawTriangle(Vec4f *points, Shader &shader, Frame &frame);
+void DrawTriangle(Vec4f *points, RenderNode &rn);
 
 void DrawFrame(Frame &frame, const char *filename);
 

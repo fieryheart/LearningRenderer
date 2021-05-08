@@ -4,6 +4,39 @@
 #include "geometry.h"
 
 namespace QGL {
+// 帧结构
+struct Frame {
+    int width;
+    int height;
+    std::vector<Vec3f> buffer;
+    Frame(int w, int h) : width(h), height(h) {
+        buffer = std::vector<Vec3f>(w*h, Vec3f(0.0f, 0.0f, 0.0f));
+    }
+    void set(int i, int j, Vec3f color) {
+        buffer[i+width*j] = color;
+    }
+};
+
+// Zbuffer结构
+struct Zbuffer {
+    int width;
+    int height;
+    std::vector<float> zbuffer;
+    Zbuffer(int w, int h) : width(w), height(h){
+        zbuffer = std::vector<float>(w*h, std::numeric_limits<float>::min());
+    }
+    float get(int i, int j) {
+        return zbuffer[i+width*j];
+    }
+    void set(int i, int j, float z) {
+        zbuffer[i+width*j] = z;
+    }
+};
+
+// 
+
+
+
 // 
 class Object {
 public:

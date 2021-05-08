@@ -17,6 +17,7 @@ struct OutVectex {
 
 struct InFragment {
     Vec3f bar;
+    float depth;
     InFragment(){}
 };
 
@@ -28,24 +29,41 @@ struct OutFragment {
 class Shader {
 public:
     virtual ~Shader() {};
-    virtual bool vertex(InVectex in, OutVectex &out) = 0;
-    virtual bool fragment(InFragment in, OutFragment &out) = 0;
+    virtual void vertex(const InVectex &in, OutVectex &out) = 0;
+    virtual bool fragment(const InFragment &in, OutFragment &out) = 0;
 };
 
 class TestShader : public Shader {
 public:
     Matrix uniform_mat_transform;
-    virtual bool vertex(InVectex in, OutVectex &out) {
+    virtual void vertex(const InVectex &in, OutVectex &out) {
         Vec4f vertex = Vec4f(in.v, 1.0f);
         vertex = uniform_mat_transform*vertex;
         vertex = vertex / vertex.w;
         out.sCoord = vertex;
     }
 
-    virtual bool fragment(InFragment in, OutFragment &out) {
-        out.color = Vec3f(1.0f, 0.0f, 0.0f);
+    virtual bool fragment(const InFragment &in, OutFragment &out) {
+        out.color = Vec3f(1.0f, 1.0f, 1.0f);
         return false;
     }
+};
+
+// 根据深度值着色
+class DepthShader : public Shader {
+public:
+    Matrix uniform_mat_transform;
+    virtual void vertex(const InVectex &in, OutVectex &out) {
+        Vec4f vertex = Vec4f(in.v, 1.0f);
+        vertex = uniform_mat_transform*vertex;
+        vertex = vertex / vertex.w;
+        out.sCoord = vertex;
+    }
+
+    virtual bool fragment(const InFragment &in, OutFragment &out) {
+        out.color = Vec3f(1.0f, 1.0f, 1.0f)*in.depth;
+        return false;
+    }    
 };
 }
 

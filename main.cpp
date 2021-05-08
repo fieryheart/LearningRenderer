@@ -8,14 +8,16 @@
 
 const int width  = 800;
 const int height = 800;
-const int depth = 255;  // 根据深度值 计算颜色
-const Vec3f light1_dir(1,1,1);
-const Vec3f camera(0,0,1);
-const Vec3f origin(0,0,0);
-const Vec3f up(0,1,0);
+const int depth = 1;  // 根据深度值 计算颜色
 
 // 画个三角形
 void Example01() {
+    const Vec3f light1_dir(1,1,1);
+    const Vec3f camera(0,0,1);
+    const Vec3f origin(0,0,0);
+    const Vec3f up(0,1,0);
+    QGL::Frame frame = QGL::Frame(width, height);
+
     Vec3f A = Vec3f(100.0f, 0.0f, 0.0f);
     Vec3f B = Vec3f(-100.0f, 0.0f, 0.0f);
     Vec3f C = Vec3f(0.0f, 100.0f, 0.0f);
@@ -40,10 +42,8 @@ void Example01() {
     QGL::TestShader testShader = QGL::TestShader();
     testShader.uniform_mat_transform = QGL::MAT_TRANS;
 
-    QGL::Frame frame = QGL::Frame(width, height);
-
-    std::cout << "do the Rasterizer." << std::endl;
-    QGL::Rendering(model, testShader, frame);
+    std::cout << "do Rendering." << std::endl;
+    // QGL::Rendering(model, testShader, frame);
 
     std::cout << "draw frame." << std::endl;
     std::string result = "../example/out.png";
@@ -55,8 +55,44 @@ void Example01() {
 
 // 加载obj模型文件
 void Example02() {
-    std::string filename = "../obj/Marry.obj";
-    Model *model = new Model(filename.c_str());
+    const Vec3f light(1,1,1);
+    const Vec3f camera(0,0,1);
+    const Vec3f origin(0,0,0);
+    const Vec3f up(0,1,0);
+    QGL::Frame frame = QGL::Frame(width, height);
+    QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    
+
+    Model *model = new Model("../obj/Marry.obj");
+    model->vertsNormalize();
+
+    // Camera
+    std::cout << "set camera." << std::endl;
+    QGL::SetModelMat();
+    QGL::SetViewMat(camera, origin, up);
+    QGL::SetPerspectiveProjectMat(camera, origin);
+    // QGL::SetOrthogonalProjectMat(width, height, depth);
+    QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
+    QGL::SetCamera(true);
+
+    // Shader
+    std::cout << "set testShader." << std::endl;
+    QGL::DepthShader depthShader = QGL::DepthShader();
+    depthShader.uniform_mat_transform = QGL::MAT_TRANS;    
+
+    // Render
+    QGL::RenderNode rn;
+    rn.model = model;
+    rn.shader = &depthShader;
+    rn.frame = &frame;
+    rn.zbuffer = &zbuffer;
+    std::cout << "do Rendering." << std::endl;
+    QGL::Rendering(rn);
+
+    std::cout << "draw frame." << std::endl;
+    std::string result = "../example/out.png";
+    QGL::FlipFrame(frame);
+    QGL::DrawFrame(frame, result.c_str());
 
     delete model;
 }

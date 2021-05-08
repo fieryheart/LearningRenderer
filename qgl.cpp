@@ -97,13 +97,14 @@ void SetScreenMat(int x, int y, int w, int h, int depth) {
     MAT_SCREEN[2][3] = depth/2.f;
 }
 
-void SetCamera(bool isPercent) {
-    if (isPercent) {
+void SetCamera(bool isVNormalized) {
+    if (isVNormalized) {    
+        // 模型的顶点数据已经归一化
         MAT_TRANS = MAT_SCREEN*MAT_PPROJECT*MAT_VIEW*MAT_MODEL;
     } else {
+        // 这里针对没有归一化的顶点数据还存在问题
         MAT_TRANS = MAT_SCREEN*MAT_OPROJECT*MAT_PPROJECT*MAT_VIEW*MAT_MODEL;
     }
-    
 }
 
 Vec3f barycentric(Vec4f *pts, Vec2f P) {
@@ -112,7 +113,10 @@ Vec3f barycentric(Vec4f *pts, Vec2f P) {
     return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
 }
 
-void Rendering(Model *model, Shader &shader, Frame &frame) {
+void Rendering(RenderNode &rn) {
+    Model *model = rn.model;
+    Shader *shader = rn.shader;
+
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
     for (int i = 0; i < nfaces; ++i) {
@@ -122,16 +126,20 @@ void Rendering(Model *model, Shader &shader, Frame &frame) {
             inV.v = v;
             inV.index = j;
             OutVectex outV;
-            shader.vertex(inV, outV);
+            shader->vertex(inV, outV);
             screen_coords[j] = outV.sCoord;
-            std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
+            // std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
         }
-        DrawTriangle(screen_coords, shader, frame);
+        DrawTriangle(screen_coords, rn);
     }
 }
 
-void DrawTriangle(Vec4f *points, Shader &shader, Frame &frame) {
-    int width = frame.width, height = frame.height;
+void DrawTriangle(Vec4f *points, RenderNode &rn) {
+    Shader *shader = rn.shader;
+    Frame *frame = rn.frame;
+    Zbuffer *zbuffer = rn.zbuffer;
+
+    int width = frame->width, height = frame->height;
     Vec2f bboxmin(width-1, height-1);
     Vec2f bboxmax(0, 0);
     Vec2f clamp(width-1, height-1); 
@@ -150,18 +158,18 @@ void DrawTriangle(Vec4f *points, Shader &shader, Frame &frame) {
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
             Vec3f bc = barycentric(points, Vec2f(P.x, P.y));
-            // float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
-            // float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
-            // float depth = std::max(0.f, std::min(1.0f, z/w));
-            // if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer[P.x+iwidth*P.y] > z) continue;
-            if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
+            float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
+            float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
+            float depth = std::max(0.f, std::min(1.0f, z/w));
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > z) continue;
+            // if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
             InFragment in;
             OutFragment out;
             in.bar = bc;
-            if (!shader.fragment(in, out)) {
-                // zbuffer.set(P.x, P.y, depth);
-                // zbuffer[P.x+iwidth*P.y] = z;
-                frame.set(P.x, P.y, out.color);
+            in.depth = z;
+            if (!shader->fragment(in, out)) {
+                zbuffer->set(P.x, P.y, z);
+                frame->set(P.x, P.y, out.color);
             }
         }
     }
