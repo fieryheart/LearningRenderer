@@ -6,7 +6,6 @@
 // #include "shaders.h"
 #include "qgl.h"
 
-Model *model = NULL;
 const int width  = 800;
 const int height = 800;
 const int depth = 255;  // 根据深度值 计算颜色
@@ -15,16 +14,8 @@ const Vec3f camera(0,0,1);
 const Vec3f origin(0,0,0);
 const Vec3f up(0,1,0);
 
-int main(int argc, char** argv) {
-
-    // RenderRayTraceing();
-
-    // model = new Model("../obj/african_head.obj");
-
-    // ScreenSpaceAmbientOcclusion();
-
-    // delete model;
-
+// 画个三角形
+void Example01() {
     Vec3f A = Vec3f(100.0f, 0.0f, 0.0f);
     Vec3f B = Vec3f(-100.0f, 0.0f, 0.0f);
     Vec3f C = Vec3f(0.0f, 100.0f, 0.0f);
@@ -33,7 +24,7 @@ int main(int argc, char** argv) {
     QGL::Face face = QGL::Face(Vec3i(0, 1, 2));
     std::vector<QGL::Face> faces{face};
 
-    model = new Model(verts, faces);
+    Model *model = new Model(verts, faces);
 
     std::cout << "set camera." << std::endl;
     QGL::SetModelMat();
@@ -60,6 +51,20 @@ int main(int argc, char** argv) {
     QGL::DrawFrame(frame, result.c_str());
 
     delete model;
+}
+
+// 加载obj模型文件
+void Example02() {
+    std::string filename = "../obj/Marry.obj";
+    Model *model = new Model(filename.c_str());
+
+    delete model;
+}
+
+int main(int argc, char** argv) {
+
+    Example02();
+
     return 0;
 }
 

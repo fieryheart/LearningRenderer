@@ -5,55 +5,57 @@
 #include <vector>
 #include "model.h"
 
-// Model::Model(const char *filename) : verts_(), faces_() {
-//     std::ifstream in;
-//     in.open (filename, std::ifstream::in);
-//     if (in.fail()) return;
-//     std::string line;
-//     while (!in.eof()) {
-//         std::getline(in, line);
-//         std::istringstream iss(line.c_str());
-//         char trash;
-//         if (!line.compare(0, 2, "v ")) {    // 点
-//             iss >> trash;
-//             Vec3f v;
-//             for (int i=0;i<3;i++) iss >> v[i];
-//             verts_.push_back(v);
-//         } else if (!line.compare(0, 2, "f ")) { // 面
-//             std::vector<int> f, tex, norm;
-//             int itrash, idx, texIdx, normIdx;
-//             iss >> trash;
-//             while (iss >> idx >> trash >> texIdx >> trash >> normIdx) {
-//                 idx--; // in wavefront obj all indices start at 1, not zero
-//                 texIdx--;
-//                 normIdx--;
-//                 f.push_back(idx);
-//                 tex.push_back(texIdx);
-//                 norm.push_back(normIdx);
-//             }
-//             faces_.push_back(f);
-//             facesTex_.push_back(tex);
-//             facesNorm_.push_back(norm);
-//         } else if (!line.compare(0, 3, "vt ")) {
-//             iss >> trash >> trash;
-//             Vec3f v;
-//             for (int i=0;i<3;i++) iss >> v[i];
-//             texCoord_.push_back(v);
-//         } else if (!line.compare(0, 3, "vn ")) {
-//             iss >> trash >> trash;
-//             Vec3f v;
-//             for (int i=0;i<3;i++) iss >> v[i];
-//             norm_.push_back(v);
-//         }
-//     }
-//     std::cerr << "# v# " << verts_.size() << " f# "  << faces_.size() << " vt# " << texCoord_.size() << " vn# " << norm_.size() << std::endl;
-//     load_texture(filename, "_diffuse.tga", diffusemap_);
-//     load_texture(filename, "_nm.tga",      normalmap_);
-//     load_texture(filename, "_spec.tga",    specularmap_);
-// }
-
-Model::Model(const char *filename) {
-
+// 2021-05-08: 模型加载
+Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
+    std::cout << "Init Model " << filename << "." << std::endl;
+    std::ifstream in;
+    in.open (filename, std::ifstream::in);
+    if (in.fail()) {
+        std::cout << "Init Model Fail." << std::endl;
+        return;
+    }
+    std::string line;
+    while (!in.eof()) {
+        // std::cout << "1" << std::endl;
+        std::getline(in, line);
+        std::istringstream iss(line.c_str());
+        char trash;
+        if (!line.compare(0, 2, "v ")) {    // 点
+            iss >> trash;
+            Vec3f v;
+            for (int i=0;i<3;i++) iss >> v[i];
+            verts.push_back(v);
+        } else if (!line.compare(0, 2, "f ")) { // 面
+            Vec3i v, vn, vt;
+            int vI, vnI, vtI;
+            int index = 0;
+            iss >> trash;
+            while (iss >> vI >> trash >> vnI >> trash >> vtI) {
+                vI--, vnI--, vtI--; // in wavefront obj all indices start at 1, not zero
+                v[index] = vI, vn[index] = vnI, vt[index]=vtI;
+                index++;
+            }
+            QGL::Face f = QGL::Face(v, vn, vt);
+            faces.push_back(f);
+        } else if (!line.compare(0, 3, "vt ")) {
+            iss >> trash >> trash;
+            Vec2f vt;
+            for (int i=0;i<2;i++) iss >> vt[i];
+            textures.push_back(vt);
+        } else if (!line.compare(0, 3, "vn ")) {
+            iss >> trash >> trash;
+            Vec3f vn;
+            for (int i=0;i<3;i++) iss >> vn[i];
+            normals.push_back(vn);
+        }
+    }
+    std::cerr << "#v " << verts.size() << std::endl;
+    std::cerr << "#vn " << normals.size() << std::endl;
+    std::cerr << "#vt " << textures.size() << std::endl;
+    std::cerr << "#f " << faces.size() << std::endl;
+    // load_texture(filename, "_diffuse.tga", diffusemap_);
+    // load_texture(filename, "_nm.tga",      normalmap_);
+    // load_texture(filename, "_spec.tga",    specularmap_);
 }
 
 Model::Model(std::vector<Vec3f> &_verts, std::vector<QGL::Face> _faces) {

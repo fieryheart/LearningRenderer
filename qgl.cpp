@@ -179,6 +179,7 @@ void DrawFrame(Frame &frame, const char *filename) {
     stbi_write_png(filename, width, height, 3, data, 0);
 }
 
+// 垂直翻转
 void FlipFrame(Frame &frame) {
     int width = frame.width, height = frame.height;
     for (int i = 0; i < height / 2; ++i) {
