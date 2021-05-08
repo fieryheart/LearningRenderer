@@ -116,6 +116,7 @@ Vec3f barycentric(Vec4f *pts, Vec2f P) {
 void Rendering(RenderNode &rn) {
     Model *model = rn.model;
     Shader *shader = rn.shader;
+    Log *log = rn.log;
 
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
@@ -131,7 +132,9 @@ void Rendering(RenderNode &rn) {
             // std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
         }
         DrawTriangle(screen_coords, rn);
+        if (log && log->flag) log->show(i, nfaces);
     }
+    if (log && log->flag) log->show(nfaces, nfaces);
 }
 
 void DrawTriangle(Vec4f *points, RenderNode &rn) {

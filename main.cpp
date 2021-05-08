@@ -61,6 +61,7 @@ void Example02() {
     const Vec3f up(0,1,0);
     QGL::Frame frame = QGL::Frame(width, height);
     QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    QGL::Log log = QGL::Log(true, "Depth Shading: ");
     
 
     Model *model = new Model("../obj/Marry.obj");
@@ -86,6 +87,7 @@ void Example02() {
     rn.shader = &depthShader;
     rn.frame = &frame;
     rn.zbuffer = &zbuffer;
+    rn.log = &log;
     std::cout << "do Rendering." << std::endl;
     QGL::Rendering(rn);
 

@@ -10,6 +10,7 @@ struct RenderNode {
     Shader *shader;
     Frame *frame;
     Zbuffer *zbuffer;
+    Log *log;
     RenderNode() {}
 };
 

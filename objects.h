@@ -2,6 +2,7 @@
 #define __OBJECTS_H__
 
 #include "geometry.h"
+// #include <stdio.h>
 
 namespace QGL {
 // 帧结构
@@ -33,7 +34,25 @@ struct Zbuffer {
     }
 };
 
-// 
+// Log
+struct Log {
+    bool flag;
+    std::string prefix;
+    Log(bool flag, std::string prefix) : flag(flag), prefix(prefix){}
+    void show(int i, int f){
+        if (i < f) {
+            std::cout << "\r" << prefix;
+            printf("%.2f", i*1.0/f*100);
+            std::cout << "% completed..." << std::flush;
+            // std::cout << "\r" << prefix << i*1.0/f*100 << "% completed." << std::flush;
+        } else {
+            std::cout << "\r";
+            for(int i = 0;i < 100; ++i) std::cout << " ";
+            std::cout.flush();
+            std::cout << "\r" << prefix << "100% completed." << std::endl;
+        }
+    }
+};
 
 
 

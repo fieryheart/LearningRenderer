@@ -61,7 +61,8 @@ public:
     }
 
     virtual bool fragment(const InFragment &in, OutFragment &out) {
-        out.color = Vec3f(1.0f, 1.0f, 1.0f)*in.depth;
+        float depth = 1.0f-std::pow(cos(in.depth*M_PI/2), 1);
+        out.color = Vec3f(1.0f, 1.0f, 1.0f)*depth;
         return false;
     }    
 };
