@@ -58,7 +58,7 @@ struct Sample2D {
         y = std::max(0, std::min(height-1, y));
         // std::cout << "(u, v): " << uv[0] << " " << uv[1] << " ";
         // std::cout << "(x, y): " << x << " " << y << std::endl;
-        int index = ((height-1-y)*width+x)*channel;
+        int index = (y*width+x)*channel;
         if (channel == 1) {
             val[0] = data[index];
             val[1] = data[index];

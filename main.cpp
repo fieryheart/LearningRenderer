@@ -102,7 +102,7 @@ void Example02() {
 // 加载纹理图片
 void Example03() {
     const Vec3f light(1,1,1);
-    const Vec3f camera(0,0,1);
+    const Vec3f camera(1,1,1);
     const Vec3f origin(0,0,0);
     const Vec3f up(0,1,0);
     QGL::Frame frame = QGL::Frame(width, height);

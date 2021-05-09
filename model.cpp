@@ -33,7 +33,7 @@ Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
             int vI, vnI, vtI;
             int index = 0;
             iss >> trash;
-            while (iss >> vI >> trash >> vnI >> trash >> vtI) {
+            while (iss >> vI >> trash >> vtI >> trash >> vnI) {
                 vI--, vnI--, vtI--; // in wavefront obj all indices start at 1, not zero
                 v[index] = vI, vn[index] = vnI, vt[index]=vtI;
                 index++;
@@ -44,6 +44,7 @@ Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
             iss >> trash >> trash;
             Vec2f vt;
             for (int i=0;i<2;i++) iss >> vt[i];
+            vt[1] = 1.0f-vt[1]; // the origin is at the left top cornor of image.
             textures.push_back(vt);
         } else if (!line.compare(0, 3, "vn ")) {
             iss >> trash >> trash;
