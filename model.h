@@ -4,24 +4,32 @@
 #include <vector>
 #include "objects.h"
 
-// 模型：面 + 纹理A + 纹理B + ...
-// 面：点ABC(对象坐标、法向量、纹理坐标)
+namespace QGL {
+// 模型: 面 + 纹理A + 纹理B + ...
+// 面:  点ABC(对象坐标、法向量、纹理坐标)
+// 贴图: 
 class Model {
 private:
 	std::vector<Vec3f> verts;
 	std::vector<Vec3f> normals;
 	std::vector<Vec2f> textures;
-	std::vector<QGL::Face> faces;
+	std::vector<Face> faces;
+	Sample2D *diffusemap_;
+	// Sample2D *normalmap_;
+	// Sample2D *specularmap_;
 public:
 	Model(const char *filename);
-	Model(std::vector<Vec3f> &_verts, std::vector<QGL::Face> _faces);
+	Model(std::vector<Vec3f> &_verts, std::vector<Face> _faces);
 	~Model();
 
 	int nverts();
 	int nfaces();
 	Vec3f vert(int nthface, int nthvert);
-	void vertsNormalize();
+	void vertsNormalize();	// 顶点数据映射至[-1, 1]
+	void LoadMap(const char *filename, MapType mt);
 };
+}
+
 // class Model {
 // private:
 // 	std::vector<Vec3f> verts_;

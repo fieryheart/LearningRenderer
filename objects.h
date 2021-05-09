@@ -2,7 +2,6 @@
 #define __OBJECTS_H__
 
 #include "geometry.h"
-// #include <stdio.h>
 
 namespace QGL {
 // 帧结构
@@ -31,6 +30,44 @@ struct Zbuffer {
     }
     void set(int i, int j, float z) {
         zbuffer[i+width*j] = z;
+    }
+};
+
+// 贴图类型
+enum MapType {
+    MT_Diffuse = 0,
+    MT_Normal,
+    MT_Specular
+};
+
+// Sample2D结构
+struct Sample2D {
+    int width;
+    int height;
+    int channel;
+    std::vector<float> data;
+    Sample2D(unsigned char *raw, int w, int h, int n) : width(w), height(h), channel(n) {
+        for (int i = 0; i < w*h; ++i) {
+            float val = ((int)raw[i])/255.0f;
+            data.push_back(val);
+        }
+    }
+    void sample(int u, int v, float &val) {
+        int index = v*width+u;
+        val = data[index];
+    }
+    void sample(int u, int v, Vec3f &val) {
+        int index = v*width+u;
+        val[0] = data[index];
+        val[1] = data[index+1];
+        val[2] = data[index+2];
+    }
+    void sample(int u, int v, Vec4f &val) {
+        int index = v*width+u;
+        val[0] = data[index];
+        val[1] = data[index+1];
+        val[2] = data[index+2];
+        val[3] = data[index+3];
     }
 };
 

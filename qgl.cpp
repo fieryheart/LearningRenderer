@@ -120,6 +120,9 @@ void Rendering(RenderNode &rn) {
 
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
+
+    // #pragma omp parallel for
+    // 未安装 OpenMP
     for (int i = 0; i < nfaces; ++i) {
         for (int j = 0; j < 3; ++j) {
             Vec3f v = model->vert(i, j);

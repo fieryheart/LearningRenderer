@@ -26,7 +26,7 @@ void Example01() {
     QGL::Face face = QGL::Face(Vec3i(0, 1, 2));
     std::vector<QGL::Face> faces{face};
 
-    Model *model = new Model(verts, faces);
+    QGL::Model *model = new QGL::Model(verts, faces);
 
     std::cout << "set camera." << std::endl;
     QGL::SetModelMat();
@@ -64,7 +64,7 @@ void Example02() {
     QGL::Log log = QGL::Log(true, "Depth Shading: ");
     
 
-    Model *model = new Model("../obj/Marry.obj");
+    QGL::Model *model = new QGL::Model("../obj/Marry.obj");
     model->vertsNormalize();
 
     // Camera
@@ -77,7 +77,7 @@ void Example02() {
     QGL::SetCamera(true);
 
     // Shader
-    std::cout << "set testShader." << std::endl;
+    std::cout << "set DepthShader." << std::endl;
     QGL::DepthShader depthShader = QGL::DepthShader();
     depthShader.uniform_mat_transform = QGL::MAT_TRANS;    
 
@@ -99,9 +99,38 @@ void Example02() {
     delete model;
 }
 
+// 加载纹理图片
+void Example03() {
+    const Vec3f light(1,1,1);
+    const Vec3f camera(0,0,1);
+    const Vec3f origin(0,0,0);
+    const Vec3f up(0,1,0);
+    QGL::Frame frame = QGL::Frame(width, height);
+    QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    QGL::Log log = QGL::Log(true, "Texture Shading: "); 
+ 
+    QGL::Model *model = new QGL::Model("../obj/Marry.obj");
+    model->vertsNormalize();
+    model->LoadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
+
+    // Camera
+    std::cout << "set camera." << std::endl;
+    QGL::SetModelMat();
+    QGL::SetViewMat(camera, origin, up);
+    QGL::SetPerspectiveProjectMat(camera, origin);
+    // QGL::SetOrthogonalProjectMat(width, height, depth);
+    QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
+    QGL::SetCamera(true);
+
+
+
+    // Shader
+    // std::cout << "set DepthShader." << std::endl;
+}
+
 int main(int argc, char** argv) {
 
-    Example02();
+    Example03();
 
     return 0;
 }

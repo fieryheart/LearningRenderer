@@ -4,7 +4,10 @@
 #include <sstream>
 #include <vector>
 #include "model.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
+namespace QGL {
 // 2021-05-08: 模型加载
 Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
     std::cout << "Init Model " << filename << "." << std::endl;
@@ -35,7 +38,7 @@ Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
                 v[index] = vI, vn[index] = vnI, vt[index]=vtI;
                 index++;
             }
-            QGL::Face f = QGL::Face(v, vn, vt);
+            Face f = Face(v, vn, vt);
             faces.push_back(f);
         } else if (!line.compare(0, 3, "vt ")) {
             iss >> trash >> trash;
@@ -58,12 +61,13 @@ Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
     // load_texture(filename, "_spec.tga",    specularmap_);
 }
 
-Model::Model(std::vector<Vec3f> &_verts, std::vector<QGL::Face> _faces) {
+Model::Model(std::vector<Vec3f> &_verts, std::vector<Face> _faces) {
     verts = _verts;
     faces = _faces;
 }
 
 Model::~Model() {
+    if (diffusemap_) delete diffusemap_;
 }
 
 int Model::nverts() {
@@ -125,6 +129,26 @@ void Model::vertsNormalize() {
         v = v / scale;
     }
 }
+
+// 加载贴图
+void Model::LoadMap(const char *filename, MapType mt) {
+    std::cout << "loadMap" << std::endl;
+    // 加载图片
+    int x,y,n;
+    unsigned char *raw = stbi_load(filename, &x, &y, &n, 0);
+    std::cout << "width: " << x << std::endl;
+    std::cout << "height: " << y << std::endl;
+    std::cout << "channel: " << n << std::endl;
+
+    Sample2D *sample2D = new Sample2D(raw, x, y, n);
+    if (mt == MT_Diffuse) diffusemap_ = sample2D;
+    else {
+        std::cout << "The map doesn't exist in model." << std::endl;
+        delete sample2D;
+    }
+}
+}
+
 
 // int Model::nverts() {
 //     return (int)verts_.size();
