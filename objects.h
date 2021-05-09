@@ -47,27 +47,34 @@ struct Sample2D {
     int channel;
     std::vector<float> data;
     Sample2D(unsigned char *raw, int w, int h, int n) : width(w), height(h), channel(n) {
-        for (int i = 0; i < w*h; ++i) {
+        for (int i = 0; i < w*h*n; ++i) {
             float val = ((int)raw[i])/255.0f;
             data.push_back(val);
         }
     }
-    void sample(int u, int v, float &val) {
-        int index = v*width+u;
-        val = data[index];
-    }
-    void sample(int u, int v, Vec3f &val) {
-        int index = v*width+u;
-        val[0] = data[index];
-        val[1] = data[index+1];
-        val[2] = data[index+2];
-    }
-    void sample(int u, int v, Vec4f &val) {
-        int index = v*width+u;
-        val[0] = data[index];
-        val[1] = data[index+1];
-        val[2] = data[index+2];
-        val[3] = data[index+3];
+    void sample(Vec2f uv, Vec4f &val) {
+        int x = int(uv[0]*width), y = int(uv[1]*height);
+        x = std::max(0, std::min(width-1, x));
+        y = std::max(0, std::min(height-1, y));
+        // std::cout << "(u, v): " << uv[0] << " " << uv[1] << " ";
+        // std::cout << "(x, y): " << x << " " << y << std::endl;
+        int index = ((height-1-y)*width+x)*channel;
+        if (channel == 1) {
+            val[0] = data[index];
+            val[1] = data[index];
+            val[2] = data[index];
+            val[3] = 1.0f;
+        } else if (channel == 3) {
+            val[0] = data[index];
+            val[1] = data[index+1];
+            val[2] = data[index+2];
+            val[3] = 1.0f;
+        } else if (channel == 4) {
+            val[0] = data[index];
+            val[1] = data[index+1];
+            val[2] = data[index+2];
+            val[3] = data[index+3];
+        }
     }
 };
 
@@ -78,15 +85,16 @@ struct Log {
     Log(bool flag, std::string prefix) : flag(flag), prefix(prefix){}
     void show(int i, int f){
         if (i < f) {
-            std::cout << "\r" << prefix;
-            printf("%.2f", i*1.0/f*100);
-            std::cout << "% completed..." << std::flush;
-            // std::cout << "\r" << prefix << i*1.0/f*100 << "% completed." << std::flush;
+            std::cerr << "\r" << prefix;
+            // printf("%.2f", i*1.0/f*100);
+            fprintf(stderr, "%.2f", i*1.0/f*100);
+            std::cerr << "% completed..." << std::flush;
+            // std::cerr << "\r" << prefix << i*1.0/f*100 << "% completed." << std::flush;
         } else {
-            std::cout << "\r";
-            for(int i = 0;i < 100; ++i) std::cout << " ";
-            std::cout.flush();
-            std::cout << "\r" << prefix << "100% completed." << std::endl;
+            std::cerr << "\r";
+            for(int i = 0;i < 100; ++i) std::cerr << " ";
+            std::cerr.flush();
+            std::cerr << "\r" << prefix << "100% completed." << std::endl;
         }
     }
 };

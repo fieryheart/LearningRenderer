@@ -82,6 +82,10 @@ Vec3f Model::vert(int nthface, int nthvert) {
     return verts[faces[nthface].v[nthvert]];
 }
 
+Vec2f Model::tex(int nthface, int nthvert) {
+    return textures[faces[nthface].vt[nthvert]];
+}
+
 // 将节点归一化
 void Model::vertsNormalize() {
     if (verts.empty()) {
@@ -131,7 +135,7 @@ void Model::vertsNormalize() {
 }
 
 // 加载贴图
-void Model::LoadMap(const char *filename, MapType mt) {
+void Model::loadMap(const char *filename, MapType mt) {
     std::cout << "loadMap" << std::endl;
     // 加载图片
     int x,y,n;
@@ -146,6 +150,10 @@ void Model::LoadMap(const char *filename, MapType mt) {
         std::cout << "The map doesn't exist in model." << std::endl;
         delete sample2D;
     }
+}
+
+void Model::sampleDiffuse(Vec2f uv, Vec4f &color) {
+    diffusemap_->sample(uv, color);
 }
 }
 

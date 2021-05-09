@@ -77,6 +77,7 @@ template <class t> struct Vec4 {
     float norm () const { return std::sqrt(x*x+y*y+z*z+w*w); }
     Vec4<t> & normalize(t l=1) { *this = (*this)*(l/norm()); return *this; }
     t& operator[](const int i) { if (i<=0) return x; else if (i==1) return y; else if (i==2) return z; else return w; }
+    Vec3<t> v3f() { return Vec3<float>((float)x, (float)y, (float)z); }
     template <class > friend std::ostream& operator<<(std::ostream& s, Vec4<t>& v);
 };
 

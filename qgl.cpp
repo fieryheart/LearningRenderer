@@ -127,9 +127,13 @@ void Rendering(RenderNode &rn) {
         for (int j = 0; j < 3; ++j) {
             Vec3f v = model->vert(i, j);
             InVectex inV;
-            inV.v = v;
-            inV.index = j;
             OutVectex outV;
+
+            inV.v = v;
+            inV.nthface = i;
+            inV.nthvert = j;
+            inV.model = model;
+            
             shader->vertex(inV, outV);
             screen_coords[j] = outV.sCoord;
             // std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
@@ -141,6 +145,7 @@ void Rendering(RenderNode &rn) {
 }
 
 void DrawTriangle(Vec4f *points, RenderNode &rn) {
+    Model *model = rn.model;
     Shader *shader = rn.shader;
     Frame *frame = rn.frame;
     Zbuffer *zbuffer = rn.zbuffer;
@@ -167,12 +172,14 @@ void DrawTriangle(Vec4f *points, RenderNode &rn) {
             float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
             float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
             float depth = std::max(0.f, std::min(1.0f, z/w));
-            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > z) continue;
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > depth) continue;
             // if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
             InFragment in;
             OutFragment out;
             in.bar = bc;
             in.depth = z;
+            in.model = model;
+
             if (!shader->fragment(in, out)) {
                 zbuffer->set(P.x, P.y, z);
                 frame->set(P.x, P.y, out.color);

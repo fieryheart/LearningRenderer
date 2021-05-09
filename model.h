@@ -25,8 +25,11 @@ public:
 	int nverts();
 	int nfaces();
 	Vec3f vert(int nthface, int nthvert);
+	Vec2f tex(int nthface, int nthvert);
 	void vertsNormalize();	// 顶点数据映射至[-1, 1]
-	void LoadMap(const char *filename, MapType mt);
+	void loadMap(const char *filename, MapType mt);
+	void sampleDiffuse(Vec2i uv, Vec4f &color);
+	void sampleDiffuse(Vec2f uv, Vec4f &color);
 };
 }
 

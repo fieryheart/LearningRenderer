@@ -111,7 +111,7 @@ void Example03() {
  
     QGL::Model *model = new QGL::Model("../obj/Marry.obj");
     model->vertsNormalize();
-    model->LoadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
+    model->loadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
 
     // Camera
     std::cout << "set camera." << std::endl;
@@ -122,10 +122,27 @@ void Example03() {
     QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
     QGL::SetCamera(true);
 
-
-
     // Shader
-    // std::cout << "set DepthShader." << std::endl;
+    std::cout << "set TexShader." << std::endl;
+    QGL::TexShader texShader = QGL::TexShader();
+    texShader.uniform_mat_transform = QGL::MAT_TRANS;
+
+    // Render
+    QGL::RenderNode rn;
+    rn.model = model;
+    rn.shader = &texShader;
+    rn.frame = &frame;
+    rn.zbuffer = &zbuffer;
+    rn.log = &log;
+    std::cout << "do Rendering." << std::endl;
+    QGL::Rendering(rn);
+
+    std::cout << "draw frame." << std::endl;
+    std::string result = "../example/out.png";
+    QGL::FlipFrame(frame);
+    QGL::DrawFrame(frame, result.c_str());
+
+    delete model;   
 }
 
 int main(int argc, char** argv) {
