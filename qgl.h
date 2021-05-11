@@ -9,8 +9,10 @@ struct RenderNode {
     Model *model;
     Shader *shader;
     Frame *frame;
-    Zbuffer *zbuffer;
+    // Zbuffer *zbuffer;
+    float *zbuffer;
     Log *log;
+    int pcount;
     RenderNode() {}
 };
 

@@ -2,6 +2,7 @@
 #include <limits>
 #include <cstdlib>
 #include <iostream>
+#include <chrono>
 #include "qgl.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -117,12 +118,13 @@ void Rendering(RenderNode &rn) {
     Model *model = rn.model;
     Shader *shader = rn.shader;
     Log *log = rn.log;
+    // Zbuffer *zbuffer = rn.zbuffer;
+    rn.pcount = 0;
 
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
 
     // #pragma omp parallel for
-    // 未安装 OpenMP
     for (int i = 0; i < nfaces; ++i) {
         for (int j = 0; j < 3; ++j) {
             Vec3f v = model->vert(i, j);
@@ -138,7 +140,16 @@ void Rendering(RenderNode &rn) {
             screen_coords[j] = outV.sCoord;
             // std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
         }
+
+        // float zA = zbuffer->get(int(screen_coords[0][0]), int(screen_coords[0][1]));
+        // float zB = zbuffer->get(int(screen_coords[1][0]), int(screen_coords[1][1]));
+        // float zC = zbuffer->get(int(screen_coords[2][0]), int(screen_coords[2][1]));
+        // if (zA >= screen_coords[0][2] && zB >= screen_coords[1][2] && zC >= screen_coords[2][2]) {
+        //     continue;
+        // }
+
         DrawTriangle(screen_coords, rn);
+
         if (log && log->flag) log->show(i, nfaces);
     }
     if (log && log->flag) log->show(nfaces, nfaces);
@@ -148,9 +159,10 @@ void DrawTriangle(Vec4f *points, RenderNode &rn) {
     Model *model = rn.model;
     Shader *shader = rn.shader;
     Frame *frame = rn.frame;
-    Zbuffer *zbuffer = rn.zbuffer;
-
+    // Zbuffer *zbuffer = rn.zbuffer;
+    float *zbuffer = rn.zbuffer;
     int width = frame->width, height = frame->height;
+
     Vec2f bboxmin(width-1, height-1);
     Vec2f bboxmax(0, 0);
     Vec2f clamp(width-1, height-1); 
@@ -166,13 +178,15 @@ void DrawTriangle(Vec4f *points, RenderNode &rn) {
     bboxmax.y = std::max(clamp.y, bboxmax.y);
 
     Vec2i P;
-    for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
-        for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
+    for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
+        float *zb = zbuffer + width*P.y;
+        for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) {
             Vec3f bc = barycentric(points, Vec2f(P.x, P.y));
             float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
             float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
             float depth = std::max(0.f, std::min(1.0f, z/w));
-            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > depth) continue;
+            // if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > depth) continue;
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zb[P.x] > depth) continue;
             // if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
             InFragment in;
             OutFragment out;
@@ -180,12 +194,30 @@ void DrawTriangle(Vec4f *points, RenderNode &rn) {
             in.depth = z;
             in.model = model;
 
-            if (!shader->fragment(in, out)) {
-                zbuffer->set(P.x, P.y, z);
-                frame->set(P.x, P.y, out.color);
-            }
+            zb[P.x] = depth;
+            // zbuffer[P.x+width*P.y] = z;
+            // if (!shader->fragment(in, out)) {
+                // zbuffer->set(P.x, P.y, z);
+                // frame->set(P.x, P.y, out.color);
+            // }
         }
     }
+
+    // int dw = bboxmax.x-bboxmin.x, dh = bboxmax.y-bboxmin.y;
+    // for (int i = 0; i < dw*dh; ++i) {
+    //     P.x = bboxmin.x + i % dw;
+    //     P.y = bboxmin.y + i / dw;
+
+    //     Vec3f bc = barycentric(points, Vec2f(P.x, P.y));
+    //     float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
+    //     float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
+    //     float depth = std::max(0.f, std::min(1.0f, z/w));        
+        
+    //     if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
+        
+    //     zbuffer[P.x+width*P.y] = depth;
+    // }
+
 }
 
 // 绘制该帧

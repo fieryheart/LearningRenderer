@@ -86,14 +86,10 @@ public:
     }
 
     virtual bool fragment(const InFragment &in, OutFragment &out) {
-        Vec3f bar = in.bar;
-        Vec2f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];
+        // Vec3f bar = in.bar;
+        // Vec2f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];
         Vec4f color;
-        // float depth = 1.0f-std::pow(cos(in.depth*M_PI/2), 1);
-        in.model->sampleDiffuse(uv, color);
-        // if (color.x == 0.0f && color.y == 0.0f && color.z == 0.0f) {
-        //     std::cout << uv[0]*2048 << " " << uv[1]*1024 << std::endl;
-        // }
+        // in.model->sampleDiffuse(uv, color);
         out.color = color.v3f();
         return false;
     }

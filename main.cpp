@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <unistd.h>
+#include <omp.h>
 // #include "shaders.h"
 #include "qgl.h"
 
@@ -86,7 +87,7 @@ void Example02() {
     rn.model = model;
     rn.shader = &depthShader;
     rn.frame = &frame;
-    rn.zbuffer = &zbuffer;
+    // rn.zbuffer = &zbuffer;
     rn.log = &log;
     std::cout << "do Rendering." << std::endl;
     QGL::Rendering(rn);
@@ -106,7 +107,10 @@ void Example03() {
     const Vec3f origin(0,0,0);
     const Vec3f up(0,1,0);
     QGL::Frame frame = QGL::Frame(width, height);
-    QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    // QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    // std::vector<float> zbuffer = std::vector<float>(width*height, std::numeric_limits<float>::min());
+    float *zbuffer = new float[width*height];
+    std::fill(zbuffer, zbuffer+width*height, std::numeric_limits<float>::min());
     QGL::Log log = QGL::Log(true, "Texture Shading: "); 
  
     QGL::Model *model = new QGL::Model("../obj/Marry.obj");
@@ -132,7 +136,7 @@ void Example03() {
     rn.model = model;
     rn.shader = &texShader;
     rn.frame = &frame;
-    rn.zbuffer = &zbuffer;
+    rn.zbuffer = zbuffer;
     rn.log = &log;
     std::cout << "do Rendering." << std::endl;
     QGL::Rendering(rn);
@@ -142,12 +146,21 @@ void Example03() {
     QGL::FlipFrame(frame);
     QGL::DrawFrame(frame, result.c_str());
 
-    delete model;   
+    delete model;
+    delete[] zbuffer;
+}
+
+void ExampleOmp() {
+	omp_set_num_threads(4);
+    #pragma omp parallel
+	{
+		std::cout << "Hello" << ", I am Thread " << omp_get_thread_num() << std::endl;
+	}
 }
 
 int main(int argc, char** argv) {
 
-    Example03();
+    ExampleOmp();
 
     return 0;
 }
