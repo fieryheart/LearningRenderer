@@ -9,12 +9,14 @@ struct RenderNode {
     Model *model;
     Shader *shader;
     Frame *frame;
-    // Zbuffer *zbuffer;
-    float *zbuffer;
+    Zbuffer *zbuffer;
+    // float *zbuffer;
+    ComType comType;
     Log *log;
-    int pcount;
     RenderNode() {}
 };
+
+extern int NUMTHREADS;
 
 extern Matrix MAT_MODEL;   // 模型空间
 extern Matrix MAT_VIEW;    // 相机空间
@@ -22,6 +24,8 @@ extern Matrix MAT_PPROJECT; // 透视投影空间
 extern Matrix MAT_OPROJECT; // 正交投影空间
 extern Matrix MAT_SCREEN;  // 屏幕空间
 extern Matrix MAT_TRANS;
+extern Matrix MAT_NORM_TRANS;
+extern Matrix MAT_NORM_IT;
 
 void SetModelMat();
 void SetViewMat(Vec3f eye, Vec3f center, Vec3f up);
@@ -38,12 +42,10 @@ Vec3f barycentric(Vec4f *pts, Vec2f P);
 
 // 模型光栅化
 void Rendering(RenderNode &rn);
+void SingleRendering(RenderNode &rn);
+void OmpRendering(RenderNode &rn);
 
 void DrawTriangle(Vec4f *points, RenderNode &rn);
-
-void DrawFrame(Frame &frame, const char *filename);
-
-void FlipFrame(Frame &frame);
 }
 
 

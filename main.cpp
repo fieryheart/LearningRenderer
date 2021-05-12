@@ -12,6 +12,7 @@ const int height = 800;
 const int depth = 1;  // 根据深度值 计算颜色
 
 // 画个三角形
+/*
 void Example01() {
     const Vec3f light1_dir(1,1,1);
     const Vec3f camera(0,0,1);
@@ -53,8 +54,10 @@ void Example01() {
 
     delete model;
 }
+*/
 
 // 加载obj模型文件
+/*
 void Example02() {
     const Vec3f light(1,1,1);
     const Vec3f camera(0,0,1);
@@ -99,6 +102,7 @@ void Example02() {
 
     delete model;
 }
+*/
 
 // 加载纹理图片
 void Example03() {
@@ -106,12 +110,10 @@ void Example03() {
     const Vec3f camera(1,1,1);
     const Vec3f origin(0,0,0);
     const Vec3f up(0,1,0);
-    QGL::Frame frame = QGL::Frame(width, height);
-    // QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
-    // std::vector<float> zbuffer = std::vector<float>(width*height, std::numeric_limits<float>::min());
-    float *zbuffer = new float[width*height];
-    std::fill(zbuffer, zbuffer+width*height, std::numeric_limits<float>::min());
-    QGL::Log log = QGL::Log(true, "Texture Shading: "); 
+    QGL::Frame frame = QGL::Frame(width, height, 4);
+    QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    QGL::Log log = QGL::Log(true, "Texture Shading: ");
+    QGL::NUMTHREADS = 8;
  
     QGL::Model *model = new QGL::Model("../obj/Marry.obj");
     model->vertsNormalize();
@@ -136,22 +138,139 @@ void Example03() {
     rn.model = model;
     rn.shader = &texShader;
     rn.frame = &frame;
-    rn.zbuffer = zbuffer;
+    rn.zbuffer = &zbuffer;
     rn.log = &log;
+    rn.comType = QGL::CT_Single;
     std::cout << "do Rendering." << std::endl;
+    QGL::Timer timer = QGL::Timer();
+    timer.update();
     QGL::Rendering(rn);
+    std::cout << timer.millisec() << "ms" << std::endl;
 
     std::cout << "draw frame." << std::endl;
-    std::string result = "../example/out.png";
-    QGL::FlipFrame(frame);
-    QGL::DrawFrame(frame, result.c_str());
+    std::string out = "../example/out.png";
+    frame.flip();
+    frame.draw(out.c_str());
+    // QGL::FlipFrame(frame);
+    // QGL::DrawFrame(frame, result.c_str());
+
 
     delete model;
-    delete[] zbuffer;
+    // delete[] zbuffer;
+}
+
+void Example04() {
+    const Vec3f camera(1,1,1);
+    const Vec3f origin(0,0,0);
+    const Vec3f up(0,1,0);
+    Vec3f light(1,1,1);
+    QGL::Frame frame = QGL::Frame(width, height, 4);
+    QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    QGL::Log log = QGL::Log(true, "Gouraud Shading: ");
+    // QGL::NUMTHREADS = 8;
+ 
+    QGL::Model *model = new QGL::Model("../obj/Marry.obj");
+    model->vertsNormalize();
+    model->loadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
+
+    // Camera
+    std::cout << "set camera." << std::endl;
+    QGL::SetModelMat();
+    QGL::SetViewMat(camera, origin, up);
+    QGL::SetPerspectiveProjectMat(camera, origin);
+    // QGL::SetOrthogonalProjectMat(width, height, depth);
+    QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
+    QGL::SetCamera(true);
+
+    // Shader
+    std::cout << "set GouraudShader." << std::endl;
+    QGL::GouraudShader gouraudShader = QGL::GouraudShader();
+    gouraudShader.uniform_mat_transform = QGL::MAT_TRANS;
+    gouraudShader.uniform_mat_norm_transform = QGL::MAT_NORM_TRANS;
+
+    gouraudShader.uniform_light = light.normalize();
+
+    // Render
+    QGL::RenderNode rn;
+    rn.model = model;
+    rn.shader = &gouraudShader;
+    rn.frame = &frame;
+    rn.zbuffer = &zbuffer;
+    rn.log = &log;
+    rn.comType = QGL::CT_Single;
+    std::cout << "do Rendering." << std::endl;
+    QGL::Timer timer = QGL::Timer();
+    timer.update();
+    QGL::Rendering(rn);
+    std::cout << timer.second() << "s" << std::endl;
+
+    std::cout << "draw frame." << std::endl;
+    std::string out = "../example/out.png";
+    frame.flip();
+    frame.draw(out.c_str());
+
+    delete model;
+}
+
+void Example05() {
+    const Vec3f camera(1,1,1);
+    const Vec3f origin(0,0,0);
+    const Vec3f up(0,1,0);
+    Vec3f light(0,1,0);
+    QGL::Frame frame = QGL::Frame(width, height, 4);
+    QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    QGL::Log log = QGL::Log(true, "Gouraud Shading: ");
+    // QGL::NUMTHREADS = 8;
+ 
+    QGL::Model *model = new QGL::Model("../obj/Marry.obj");
+    model->vertsNormalize();
+    model->loadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
+
+    // Camera
+    std::cout << "set camera." << std::endl;
+    QGL::SetModelMat();
+    QGL::SetViewMat(camera, origin, up);
+    QGL::SetPerspectiveProjectMat(camera, origin);
+    // QGL::SetOrthogonalProjectMat(width, height, depth);
+    QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
+    QGL::SetCamera(true);
+
+    // Shader
+    std::cout << "set PhongShader." << std::endl;
+    QGL::PhongShader phongShader = QGL::PhongShader();
+    phongShader.uniform_mat_transform = QGL::MAT_TRANS;
+    phongShader.uniform_mat_norm_transform = QGL::MAT_NORM_TRANS;
+    phongShader.uniform_camera = camera;
+    phongShader.uniform_light = light.normalize();
+
+    // Render
+    QGL::RenderNode rn;
+    rn.model = model;
+    rn.shader = &phongShader;
+    rn.frame = &frame;
+    rn.zbuffer = &zbuffer;
+    rn.log = &log;
+    rn.comType = QGL::CT_Single;
+    std::cout << "do Rendering." << std::endl;
+    QGL::Timer timer = QGL::Timer();
+    timer.update();
+    QGL::Rendering(rn);
+    std::cout << timer.second() << "s" << std::endl;
+
+    std::cout << "draw frame." << std::endl;
+    std::string out = "../example/out.png";
+    frame.flip();
+    frame.draw(out.c_str());
+
+    delete model;
 }
 
 void ExampleOmp() {
-	omp_set_num_threads(4);
+    // std::cout << "Num theads supported: " << omp_get_num_procs() << std::endl;
+	// omp_set_num_threads(4);
+    // int num_procs = omp_get_num_procs();
+    // std::cout << "Num theads supported: " << num_procs << std::endl;
+    // #pragma omp parallel num_threads(2*num_procs-1)
     #pragma omp parallel
 	{
 		std::cout << "Hello" << ", I am Thread " << omp_get_thread_num() << std::endl;
@@ -160,7 +279,7 @@ void ExampleOmp() {
 
 int main(int argc, char** argv) {
 
-    ExampleOmp();
+    Example05();
 
     return 0;
 }

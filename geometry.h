@@ -27,6 +27,7 @@ template <class t> struct Vec2 {
 template <class t> struct Vec3 {
     t x, y, z;
     Vec3<t>() : x(t()), y(t()), z(t()) { }
+    Vec3<t>(t _t) : x(_t), y(_t), z(_t) {}
     Vec3<t>(t _x, t _y, t _z) : x(_x), y(_y), z(_z) {}
     template <class u> Vec3<t>(const Vec3<u> &v);
     Vec3<t>(const Vec3<t> &v) : x(t()), y(t()), z(t()) { *this = v; }
@@ -56,6 +57,7 @@ template <class t> struct Vec3 {
 template <class t> struct Vec4 {
     t x, y, z, w;
     Vec4<t>() : x(t()), y(t()), z(t()), w(t()) { }
+    Vec4<t>(t _t) : x(_t), y(_t), z(_t), w(_t) {}
     Vec4<t>(t _x, t _y, t _z, t _w) : x(_x), y(_y), z(_z), w(_w) {}
     template <class u> Vec4<t>(const Vec3<u> &v, t _w) : x(v.x), y(v.y), z(v.z), w(_w) {}
     // template <class u> Vec4<t>(const Vec4<u> &v);

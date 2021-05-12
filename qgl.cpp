@@ -2,18 +2,126 @@
 #include <limits>
 #include <cstdlib>
 #include <iostream>
-#include <chrono>
 #include "qgl.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
 
 namespace QGL {
+
+int NUMTHREADS = 1;
+
 Matrix MAT_MODEL;   // 模型空间
 Matrix MAT_VIEW;    // 相机空间
 Matrix MAT_PPROJECT; // 透视投影空间
 Matrix MAT_OPROJECT; // 正交投影空间
 Matrix MAT_SCREEN;  // 屏幕空间
 Matrix MAT_TRANS;
+Matrix MAT_NORM_TRANS;
+Matrix MAT_NORM_IT;
+
+
+/*! \brief Convert RGB to HSV color space
+  Copy from https://gist.github.com/fairlight1337/4935ae72bcbcc1ba5c72
+  Converts a given set of RGB values `r', `g', `b' into HSV
+  coordinates. The input RGB values are in the range [0, 1], and the
+  output HSV values are in the ranges h = [0, 360], and s, v = [0,
+  1], respectively.
+  
+  \param fR Red component, used as input, range: [0, 1]
+  \param fG Green component, used as input, range: [0, 1]
+  \param fB Blue component, used as input, range: [0, 1]
+  \param fH Hue component, used as output, range: [0, 360]
+  \param fS Hue component, used as output, range: [0, 1]
+  \param fV Hue component, used as output, range: [0, 1]
+  
+*/
+void RGBtoHSV(float& fR, float& fG, float fB, float& fH, float& fS, float& fV) {
+  float fCMax = std::max(std::max(fR, fG), fB);
+  float fCMin = std::min(std::min(fR, fG), fB);
+  float fDelta = fCMax - fCMin;
+  
+  if(fDelta > 0) {
+    if(fCMax == fR) {
+      fH = 60 * (fmod(((fG - fB) / fDelta), 6));
+    } else if(fCMax == fG) {
+      fH = 60 * (((fB - fR) / fDelta) + 2);
+    } else if(fCMax == fB) {
+      fH = 60 * (((fR - fG) / fDelta) + 4);
+    }
+    
+    if(fCMax > 0) {
+      fS = fDelta / fCMax;
+    } else {
+      fS = 0;
+    }
+    
+    fV = fCMax;
+  } else {
+    fH = 0;
+    fS = 0;
+    fV = fCMax;
+  }
+  
+  if(fH < 0) {
+    fH = 360 + fH;
+  }
+}
+
+
+/*! \brief Convert HSV to RGB color space
+  Copy from https://gist.github.com/fairlight1337/4935ae72bcbcc1ba5c72
+  Converts a given set of HSV values `h', `s', `v' into RGB
+  coordinates. The output RGB values are in the range [0, 1], and
+  the input HSV values are in the ranges h = [0, 360], and s, v =
+  [0, 1], respectively.
+  
+  \param fR Red component, used as output, range: [0, 1]
+  \param fG Green component, used as output, range: [0, 1]
+  \param fB Blue component, used as output, range: [0, 1]
+  \param fH Hue component, used as input, range: [0, 360]
+  \param fS Hue component, used as input, range: [0, 1]
+  \param fV Hue component, used as input, range: [0, 1]
+  
+*/
+void HSVtoRGB(float& fR, float& fG, float& fB, float& fH, float& fS, float& fV) {
+  float fC = fV * fS; // Chroma
+  float fHPrime = fmod(fH / 60.0, 6);
+  float fX = fC * (1 - fabs(fmod(fHPrime, 2) - 1));
+  float fM = fV - fC;
+  
+  if(0 <= fHPrime && fHPrime < 1) {
+    fR = fC;
+    fG = fX;
+    fB = 0;
+  } else if(1 <= fHPrime && fHPrime < 2) {
+    fR = fX;
+    fG = fC;
+    fB = 0;
+  } else if(2 <= fHPrime && fHPrime < 3) {
+    fR = 0;
+    fG = fC;
+    fB = fX;
+  } else if(3 <= fHPrime && fHPrime < 4) {
+    fR = 0;
+    fG = fX;
+    fB = fC;
+  } else if(4 <= fHPrime && fHPrime < 5) {
+    fR = fX;
+    fG = 0;
+    fB = fC;
+  } else if(5 <= fHPrime && fHPrime < 6) {
+    fR = fC;
+    fG = 0;
+    fB = fX;
+  } else {
+    fR = 0;
+    fG = 0;
+    fB = 0;
+  }
+  
+  fR += fM;
+  fG += fM;
+  fB += fM;
+}
+
 
 void SetModelMat() {
     MAT_MODEL = Matrix::identity(4);
@@ -106,6 +214,8 @@ void SetCamera(bool isVNormalized) {
         // 这里针对没有归一化的顶点数据还存在问题
         MAT_TRANS = MAT_SCREEN*MAT_OPROJECT*MAT_PPROJECT*MAT_VIEW*MAT_MODEL;
     }
+    MAT_NORM_TRANS = MAT_MODEL.inverse().transpose();
+    // MAT_NORM_IT = MAT_NORM_TRANS.inverse().transpose();
 }
 
 Vec3f barycentric(Vec4f *pts, Vec2f P) {
@@ -115,16 +225,18 @@ Vec3f barycentric(Vec4f *pts, Vec2f P) {
 }
 
 void Rendering(RenderNode &rn) {
+    if (rn.comType == CT_Single) SingleRendering(rn);
+    else if (rn.comType == CT_Omp) OmpRendering(rn);
+    else return;
+}
+
+void SingleRendering(RenderNode &rn) {
     Model *model = rn.model;
     Shader *shader = rn.shader;
     Log *log = rn.log;
     // Zbuffer *zbuffer = rn.zbuffer;
-    rn.pcount = 0;
-
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
-
-    // #pragma omp parallel for
     for (int i = 0; i < nfaces; ++i) {
         for (int j = 0; j < 3; ++j) {
             Vec3f v = model->vert(i, j);
@@ -155,12 +267,52 @@ void Rendering(RenderNode &rn) {
     if (log && log->flag) log->show(nfaces, nfaces);
 }
 
+// Omp光栅化未处理好
+void OmpRendering(RenderNode &rn) {
+    Model *model = rn.model;
+    Shader *shader = rn.shader;
+    Log *log = rn.log;
+    // Zbuffer *zbuffer = rn.zbuffer;
+
+    Vec4f screen_coords[3];
+    int nfaces = model->nfaces();
+
+    #pragma omp parallel for num_threads(NUMTHREADS)
+    for (int i = 0; i < nfaces; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            Vec3f v = model->vert(i, j);
+            InVectex inV;
+            OutVectex outV;
+
+            inV.v = v;
+            inV.nthface = i;
+            inV.nthvert = j;
+            inV.model = model;
+            
+            shader->vertex(inV, outV);
+            screen_coords[j] = outV.sCoord;
+            // std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
+        }
+
+        // float zA = zbuffer->get(int(screen_coords[0][0]), int(screen_coords[0][1]));
+        // float zB = zbuffer->get(int(screen_coords[1][0]), int(screen_coords[1][1]));
+        // float zC = zbuffer->get(int(screen_coords[2][0]), int(screen_coords[2][1]));
+        // if (zA >= screen_coords[0][2] && zB >= screen_coords[1][2] && zC >= screen_coords[2][2]) {
+        //     continue;
+        // }
+
+        DrawTriangle(screen_coords, rn);
+
+        // if (log && log->flag) log->show(i, nfaces);
+    }
+    // if (log && log->flag) log->show(nfaces, nfaces);
+}
+
 void DrawTriangle(Vec4f *points, RenderNode &rn) {
     Model *model = rn.model;
     Shader *shader = rn.shader;
     Frame *frame = rn.frame;
-    // Zbuffer *zbuffer = rn.zbuffer;
-    float *zbuffer = rn.zbuffer;
+    Zbuffer *zbuffer = rn.zbuffer;
     int width = frame->width, height = frame->height;
 
     Vec2f bboxmin(width-1, height-1);
@@ -178,70 +330,44 @@ void DrawTriangle(Vec4f *points, RenderNode &rn) {
     bboxmax.y = std::max(clamp.y, bboxmax.y);
 
     Vec2i P;
+    Vec3f bc;
+    float z, w, depth, weight;
+    // float r,g,b,h,s,v;
     for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
-        float *zb = zbuffer + width*P.y;
         for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) {
-            Vec3f bc = barycentric(points, Vec2f(P.x, P.y));
-            float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
-            float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
-            float depth = std::max(0.f, std::min(1.0f, z/w));
-            // if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > depth) continue;
-            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zb[P.x] > depth) continue;
+            bc = barycentric(points, Vec2f(P.x, P.y));
+            z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
+            w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
+            depth = std::max(0.f, std::min(1.0f, z/w));
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > depth) continue;
+            // if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zb[P.x] > depth) continue;
             // if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
             InFragment in;
             OutFragment out;
             in.bar = bc;
             in.depth = z;
             in.model = model;
-
-            zb[P.x] = depth;
-            // zbuffer[P.x+width*P.y] = z;
+            if (!shader->fragment(in, out)) {
+                zbuffer->set(P.x, P.y, z);
+                frame->set(P.x, P.y, out.color);
+            }
             // if (!shader->fragment(in, out)) {
-                // zbuffer->set(P.x, P.y, z);
-                // frame->set(P.x, P.y, out.color);
+            //     zb[P.x] = depth;
+            //     frame->set(P.x, P.y, out.color);
             // }
         }
     }
-
     // int dw = bboxmax.x-bboxmin.x, dh = bboxmax.y-bboxmin.y;
     // for (int i = 0; i < dw*dh; ++i) {
     //     P.x = bboxmin.x + i % dw;
     //     P.y = bboxmin.y + i / dw;
-
     //     Vec3f bc = barycentric(points, Vec2f(P.x, P.y));
     //     float z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
     //     float w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
     //     float depth = std::max(0.f, std::min(1.0f, z/w));        
-        
     //     if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
-        
     //     zbuffer[P.x+width*P.y] = depth;
     // }
-
-}
-
-// 绘制该帧
-void DrawFrame(Frame &frame, const char *filename) {
-    int width = frame.width, height = frame.height;
-    auto data = (unsigned char*)malloc(width*height*3);
-    for (int i = 0; i < width*height; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            data[i*3+j] = (unsigned char)(255*std::max(0.0f, std::min(1.0f, frame.buffer[i][j])));
-        }
-    }
-    stbi_write_png(filename, width, height, 3, data, 0);
-}
-
-// 垂直翻转
-void FlipFrame(Frame &frame) {
-    int width = frame.width, height = frame.height;
-    for (int i = 0; i < height / 2; ++i) {
-        for (int j = 0; j < width; ++j) {
-            Vec3f t = frame.buffer[j+width*i];
-            frame.buffer[j+width*i] = frame.buffer[j+width*(height-1-i)];
-            frame.buffer[j+width*(height-1-i)] = t;
-        }
-    }
 }
 }
 

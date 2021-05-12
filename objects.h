@@ -1,20 +1,28 @@
 #ifndef __OBJECTS_H__
 #define __OBJECTS_H__
 
+#include <chrono>
+#include <iostream>
 #include "geometry.h"
+
+using namespace std::chrono;
 
 namespace QGL {
 // 帧结构
 struct Frame {
     int width;
     int height;
-    std::vector<Vec3f> buffer;
-    Frame(int w, int h) : width(h), height(h) {
-        buffer = std::vector<Vec3f>(w*h, Vec3f(0.0f, 0.0f, 0.0f));
+    int channel;
+    std::vector<Vec4f> buffer;
+    Frame(int w, int h, int n) : width(w), height(h), channel(n) {
+        buffer = std::vector<Vec4f>(w*h, Vec4f(Vec3f(0.0f), 1.0f));
     }
-    void set(int i, int j, Vec3f color) {
+    ~Frame(){}
+    void set(int i, int j, Vec4f color) {
         buffer[i+width*j] = color;
     }
+    void draw(const char *filename);
+    void flip();
 };
 
 // Zbuffer结构
@@ -31,6 +39,12 @@ struct Zbuffer {
     void set(int i, int j, float z) {
         zbuffer[i+width*j] = z;
     }
+};
+
+// 计算方式
+enum ComType {
+    CT_Single = 0,
+    CT_Omp
 };
 
 // 贴图类型
@@ -98,6 +112,27 @@ struct Log {
         }
     }
 };
+
+// 计时器
+class Timer
+{
+public:
+    Timer() {update();}
+    ~Timer() {}
+    void update() {_start = high_resolution_clock::now();}
+    double second() {return microsec()*0.000001;}
+    double millisec() {return microsec()*0.001;}
+    long long microsec() {return duration_cast<microseconds>(high_resolution_clock::now() - _start).count();}
+private:
+    time_point<high_resolution_clock>_start;
+};
+
+
+
+
+
+
+
 
 
 

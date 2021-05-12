@@ -83,6 +83,10 @@ Vec3f Model::vert(int nthface, int nthvert) {
     return verts[faces[nthface].v[nthvert]];
 }
 
+Vec3f Model::norm(int nthface, int nthvert) {
+    return normals[faces[nthface].vn[nthvert]];
+}
+
 Vec2f Model::tex(int nthface, int nthvert) {
     return textures[faces[nthface].vt[nthvert]];
 }
@@ -137,13 +141,11 @@ void Model::vertsNormalize() {
 
 // 加载贴图
 void Model::loadMap(const char *filename, MapType mt) {
-    std::cout << "loadMap" << std::endl;
+    std::cout << "loadMap: ";
     // 加载图片
     int x,y,n;
     unsigned char *raw = stbi_load(filename, &x, &y, &n, 0);
-    std::cout << "width: " << x << std::endl;
-    std::cout << "height: " << y << std::endl;
-    std::cout << "channel: " << n << std::endl;
+    std::cout << "(" << x << ", " << y << ", " << n << ")" << std::endl;
 
     Sample2D *sample2D = new Sample2D(raw, x, y, n);
     if (mt == MT_Diffuse) diffusemap_ = sample2D;

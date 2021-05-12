@@ -3,7 +3,7 @@ message(STATUS "set compiler")
 set(CMAKE_C_COMPILER "/usr/local/Cellar/llvm/12.0.0/bin/clang")
 set(CMAKE_CXX_COMPILER "/usr/local/Cellar/llvm/12.0.0/bin/clang++")
 
-project (qrenderer)
+project (LearningRenderer)
 set(OPENMP_LIBRARIES "/usr/local/opt/llvm@12/lib")
 set(OPENMP_INCLUDES "/usr/local/Cellar/llvm/12.0.0/include")
 

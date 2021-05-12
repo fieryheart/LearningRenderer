@@ -25,6 +25,7 @@ public:
 	int nverts();
 	int nfaces();
 	Vec3f vert(int nthface, int nthvert);
+	Vec3f norm(int nthface, int nthvert);
 	Vec2f tex(int nthface, int nthvert);
 	void vertsNormalize();	// 顶点数据映射至[-1, 1]
 	void loadMap(const char *filename, MapType mt);
