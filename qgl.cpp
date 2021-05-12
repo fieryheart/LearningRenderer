@@ -8,14 +8,14 @@ namespace QGL {
 
 int NUMTHREADS = 1;
 
-Matrix MAT_MODEL;   // 模型空间
-Matrix MAT_VIEW;    // 相机空间
-Matrix MAT_PPROJECT; // 透视投影空间
-Matrix MAT_OPROJECT; // 正交投影空间
-Matrix MAT_SCREEN;  // 屏幕空间
-Matrix MAT_TRANS;
-Matrix MAT_NORM_TRANS;
-Matrix MAT_NORM_IT;
+Matrix MAT_MODEL = Matrix::identity(4);;   // 模型空间
+Matrix MAT_VIEW = Matrix::identity(4);;    // 相机空间
+Matrix MAT_PPROJECT = Matrix::identity(4);; // 透视投影空间
+Matrix MAT_OPROJECT = Matrix::identity(4);; // 正交投影空间
+Matrix MAT_SCREEN = Matrix::identity(4);;  // 屏幕空间
+Matrix MAT_TRANS = Matrix::identity(4);;
+Matrix MAT_NORM_TRANS = Matrix::identity(4);;
+Matrix MAT_NORM_IT = Matrix::identity(4);;
 
 
 /*! \brief Convert RGB to HSV color space
@@ -235,6 +235,7 @@ void SingleRendering(RenderNode &rn) {
     Shader *shader = rn.shader;
     Log *log = rn.log;
     // Zbuffer *zbuffer = rn.zbuffer;
+	Frame *frame = rn.frame;
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
     for (int i = 0; i < nfaces; ++i) {

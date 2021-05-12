@@ -13,11 +13,15 @@ struct Frame {
     int width;
     int height;
     int channel;
+    int id;
     std::vector<Vec4f> buffer;
     Frame(int w, int h, int n) : width(w), height(h), channel(n) {
         buffer = std::vector<Vec4f>(w*h, Vec4f(Vec3f(0.0f), 1.0f));
     }
     ~Frame(){}
+    Vec4f get(int i, int j) {
+        return buffer[i+width*j];
+    }
     void set(int i, int j, Vec4f color) {
         buffer[i+width*j] = color;
     }
@@ -31,13 +35,16 @@ struct Zbuffer {
     int height;
     std::vector<float> zbuffer;
     Zbuffer(int w, int h) : width(w), height(h){
-        zbuffer = std::vector<float>(w*h, std::numeric_limits<float>::min());
+        zbuffer = std::vector<float>(w*h, 0.0f);
     }
     float get(int i, int j) {
         return zbuffer[i+width*j];
     }
     void set(int i, int j, float z) {
         zbuffer[i+width*j] = z;
+    }
+    void clear() {
+        std::fill(zbuffer.begin(), zbuffer.end(), 0.0f);
     }
 };
 
@@ -114,8 +121,7 @@ struct Log {
 };
 
 // 计时器
-class Timer
-{
+class Timer {
 public:
     Timer() {update();}
     ~Timer() {}
@@ -127,13 +133,22 @@ private:
     time_point<high_resolution_clock>_start;
 };
 
+// 光源
+struct Light {
+    virtual ~Light() {};
+};
 
+struct DirectLight : Light {
+    Vec3f pos;
+    Vec3f dir;
+    DirectLight(Vec3f pos, Vec3f dir) : pos(pos), dir(dir) {} 
+};
 
-
-
-
-
-
+struct PointLight : Light {
+    Vec3f pos;        // 位置
+    float illumination;
+    PointLight(Vec3f pos, float illumination) : pos(pos), illumination(illumination) {}
+};
 
 
 // 

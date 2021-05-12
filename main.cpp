@@ -159,6 +159,8 @@ void Example03() {
     // delete[] zbuffer;
 }
 
+// Gouraud Shader
+/*
 void Example04() {
     const Vec3f camera(1,1,1);
     const Vec3f origin(0,0,0);
@@ -211,7 +213,10 @@ void Example04() {
 
     delete model;
 }
+*/
 
+// Phong Shader with no shadow
+/*
 void Example05() {
     const Vec3f camera(1,1,1);
     const Vec3f origin(0,0,0);
@@ -264,6 +269,87 @@ void Example05() {
 
     delete model;
 }
+*/
+
+// Phong Shader with hard shadow
+void Example06() {
+    const Vec3f camera(1,1,1);
+    const Vec3f origin(0,0,0);
+    const Vec3f up(0,1,0);
+    QGL::DirectLight dl = QGL::DirectLight(Vec3f(0, 1, 1), Vec3f(0,-1,-1));
+    QGL::Frame depthFrame = QGL::Frame(width, height, 4);
+    depthFrame.id = 1;
+    QGL::Frame frame = QGL::Frame(width, height, 4);
+    frame.id = 2;
+    QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    QGL::Log log = QGL::Log(true, "Depth Shading: ");
+    // QGL::NUMTHREADS = 8;
+ 
+    QGL::Model *model = new QGL::Model("../obj/Marry.obj");
+    model->vertsNormalize();
+    model->loadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
+
+    // Set camera from light
+    std::cout << "set camera from light." << std::endl;
+    QGL::SetModelMat();
+    QGL::SetViewMat(dl.pos, origin, up);
+    // QGL::SetPerspectiveProjectMat(camera, origin);
+    QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
+    QGL::SetCamera(true);
+
+    // Depth Shader
+    std::cout << "set Depth Shader." << std::endl;
+    QGL::DepthShader depthShader = QGL::DepthShader();
+    depthShader.uniform_mat_transform = QGL::MAT_TRANS;
+    // Get z-buffer
+    QGL::RenderNode rn;
+    rn.model = model;
+    rn.shader = &depthShader;
+    rn.frame = &depthFrame;
+    rn.zbuffer = &zbuffer;
+    rn.log = &log;
+    rn.comType = QGL::CT_Single;
+    std::cout << "Get z-buffer" << std::endl;
+    QGL::Timer timer = QGL::Timer();
+    timer.update();
+    QGL::Rendering(rn);
+    std::cout << timer.second() << "s" << std::endl;
+
+
+    std::cout << "set Shadow Shader." << std::endl;
+    log = QGL::Log(true, "Shadow Shading: ");
+    QGL::ShadowShader shadowShader = QGL::ShadowShader();
+    shadowShader.uniform_mat_depth_transform = QGL::MAT_TRANS;
+    // Set camera from eye
+    std::cout << "Set camera from eye." << std::endl;
+    QGL::SetModelMat();
+    QGL::SetViewMat(camera, origin, up);
+    QGL::SetPerspectiveProjectMat(camera, origin);
+    QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
+    QGL::SetCamera(true);    
+
+    shadowShader.uniform_mat_transform = QGL::MAT_TRANS;    
+    shadowShader.uniform_mat_norm_transform = QGL::MAT_NORM_TRANS;
+    shadowShader.uniform_camera = camera;
+    shadowShader.uniform_light = -dl.dir;
+    shadowShader.depthFrame = &depthFrame;
+
+    rn.shader = &shadowShader;
+    rn.frame = &frame;
+    zbuffer.clear();
+
+    std::cout << "Render Shadow." << std::endl;
+    timer.update();
+    QGL::Rendering(rn);
+    std::cout << timer.second() << "s" << std::endl;
+
+    std::cout << "draw frame." << std::endl;
+    std::string out = "../example/out.png";
+    frame.flip();
+    frame.draw(out.c_str());
+
+    delete model;
+}
 
 void ExampleOmp() {
     // std::cout << "Num theads supported: " << omp_get_num_procs() << std::endl;
@@ -279,7 +365,7 @@ void ExampleOmp() {
 
 int main(int argc, char** argv) {
 
-    Example05();
+    Example06();
 
     return 0;
 }

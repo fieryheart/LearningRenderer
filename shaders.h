@@ -63,7 +63,8 @@ public:
     }
 
     virtual bool fragment(const InFragment &in, OutFragment &out) {
-        float depth = 1.0f-std::pow(cos(in.depth*M_PI/2), 1);
+        // float depth = 1.0f-std::pow(cos(in.depth*M_PI/2), 1);
+        float depth = in.depth;
         out.color = Vec4f(Vec3f(1.0f, 1.0f, 1.0f)*depth, 1.0f);
         return false;
     }    
@@ -168,6 +169,72 @@ public:
         float diffuse = std::max(0.0f, dir*N);
 
         Vec3f v = varying_vertex[0]*bar[0]+varying_vertex[1]*bar[1]+varying_vertex[2]*bar[2];
+        Vec3f view = uniform_camera-v;
+        Vec3f h = (view + dir).normalize();
+        float a = std::max(0.0f, h*N);
+        float specular = std::pow(a, 100.f);
+
+        Vec2f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];
+        Vec4f color;
+        in.model->sampleDiffuse(uv, color);
+
+        float Kd = 0.8;
+        float Ks = 0.0;
+        float Ka = 1.0;
+
+        color = color*(Kd*diffuse+Ks*specular)*1.3f+Ka/255.0f;
+        color[3] = 1.0f;
+        out.color = color;
+        return false;
+    }    
+};
+
+class ShadowShader : public Shader {
+public:
+    Matrix uniform_mat_transform;
+    Matrix uniform_mat_norm_transform;
+    Matrix uniform_mat_depth_transform;
+    Vec3f uniform_camera;
+    Vec3f uniform_light;
+    Vec3f varying_vertex[3];
+    Vec3f varying_normal[3];
+    Vec2f varying_uv[3];
+    Frame *depthFrame;
+
+    virtual void vertex(const InVectex &in, OutVectex &out) {
+        Vec4f _normal = Vec4f(in.model->norm(in.nthface, in.nthvert), 0.0f);
+        _normal = (uniform_mat_norm_transform*_normal).normalize();
+        varying_normal[in.nthvert] = _normal.v3f();
+
+        varying_vertex[in.nthvert] = in.v;
+        Vec4f vertex = Vec4f(in.v, 1.0f);
+        vertex = uniform_mat_transform*vertex;
+        vertex = vertex / vertex.w;
+        out.sCoord = vertex;
+
+        // tex
+        Vec2f uv = in.model->tex(in.nthface, in.nthvert);
+        varying_uv[in.nthvert] = uv;
+    }
+
+    virtual bool fragment(const InFragment &in, OutFragment &out) {
+        Vec3f bar = in.bar;
+        Vec3f dir = uniform_light;
+        Vec3f v = varying_vertex[0]*bar[0]+varying_vertex[1]*bar[1]+varying_vertex[2]*bar[2];
+        
+        // if shadow
+        Vec4f v4f = Vec4f(v, 1.0f);
+        v4f = uniform_mat_depth_transform*v4f;
+        v4f = v4f / v4f.w;
+        float z = depthFrame->get(int(v4f.x+.5f), int(v4f.y+.5f))[0];
+        if (v4f.z > z + 0.003f) {
+            out.color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+            return false;
+        }
+
+        Vec3f N = varying_normal[0]*bar[0]+varying_normal[1]*bar[1]+varying_normal[2]*bar[2];
+        float diffuse = std::max(0.0f, dir*N);
+
         Vec3f view = uniform_camera-v;
         Vec3f h = (view + dir).normalize();
         float a = std::max(0.0f, h*N);
