@@ -254,6 +254,22 @@ public:
         return false;
     }    
 };
+
+class PlaneShader : public Shader {
+public:
+    Matrix uniform_mat_transform;
+    Vec4f uniform_color;
+    virtual void vertex(const InVectex &in, OutVectex &out) {
+        Vec4f vertex = Vec4f(in.v, 1.0f);
+        vertex = uniform_mat_transform*vertex;
+        vertex = vertex / vertex.w;
+        out.sCoord = vertex;
+    }
+    virtual bool fragment(const InFragment &in, OutFragment &out) {
+        out.color = uniform_color;
+        return false;
+    }
+};
 }
 
 

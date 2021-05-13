@@ -62,7 +62,20 @@ Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
     // load_texture(filename, "_spec.tga",    specularmap_);
 }
 
-Model::Model(std::vector<Vec3f> &_verts, std::vector<Face> _faces) {
+Model::Model(Plane plane) {
+    verts.push_back(plane.points[0]);
+    verts.push_back(plane.points[1]);
+    verts.push_back(plane.points[2]);
+    verts.push_back(plane.points[3]);
+    normals.push_back(plane.normal);
+    normals.push_back(plane.normal);
+    normals.push_back(plane.normal);
+    normals.push_back(plane.normal);
+    faces.push_back(Face(Vec3i(0, 1, 2)));
+    faces.push_back(Face(Vec3i(1, 2, 3)));
+}
+
+Model::Model(std::vector<Vec3f> &_verts, std::vector<Face> &_faces) {
     verts = _verts;
     faces = _faces;
 }

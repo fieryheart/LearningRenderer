@@ -150,13 +150,6 @@ struct PointLight : Light {
     PointLight(Vec3f pos, float illumination) : pos(pos), illumination(illumination) {}
 };
 
-
-// 
-class Object {
-public:
-    virtual ~Object() {};
-};
-
 // 面：对象坐标、法向量、纹理坐标
 struct Face {
     Vec3i v;
@@ -168,37 +161,57 @@ struct Face {
     Face(Vec3i v, Vec3i vn, Vec3i vt) : v(v), vn(vn), vt(vt){}
 };
 
-// 三角形：点、法向量
-class Triangle : public Object {
-private:
-    Vec3f points[3];
-    Vec3f normal;
-public:
-    Triangle() {};
-    ~Triangle() {};
-    Triangle(Vec3f *_points) {points[0] = _points[0]; points[1] = _points[1]; points[2] = _points[2];}
-    Triangle(Vec3f *_points, Vec3f _normal) {points[0] = _points[0]; points[1] = _points[1]; points[2] = _points[2]; normal = _normal;}
-    Vec3f getPoints(int index) {
-        if (index >= 0 && index <= 2) throw "Index is more than 2.";
-        return points[index];
-    }
-    void setPoints(int index, Vec3f point) {
-        if (index >= 0 && index <= 2) throw "Index is more than 2.";
-        points[index] = point;
-    }
-    Vec3f getNormal() {
-        return normal;
-    }
-    void setNormal(Vec3f _normal) {
-        normal = _normal;
-    }
+
+// 
+struct Object {
+    virtual ~Object() {};
 };
 
-// 四边形： 点、法向量
-// class Rectangle : public Object {
-// private:
 
+// 三角形：点、法向量
+// class Triangle : public Object {
+// private:
+//     Vec3f points[3];
+//     Vec3f normal;
 // public:
+//     Triangle() {};
+//     ~Triangle() {};
+//     Triangle(Vec3f *_points) {points[0] = _points[0]; points[1] = _points[1]; points[2] = _points[2];}
+//     Triangle(Vec3f *_points, Vec3f _normal) {points[0] = _points[0]; points[1] = _points[1]; points[2] = _points[2]; normal = _normal;}
+//     Vec3f getPoints(int index) {
+//         if (index >= 0 && index <= 2) throw "Index is more than 2.";
+//         return points[index];
+//     }
+//     void setPoints(int index, Vec3f point) {
+//         if (index >= 0 && index <= 2) throw "Index is more than 2.";
+//         points[index] = point;
+//     }
+//     Vec3f getNormal() {
+//         return normal;
+//     }
+//     void setNormal(Vec3f _normal) {
+//         normal = _normal;
+//     }
 // };
+
+// 四边形： 点、法向量
+struct Plane : Object {
+    Vec3f points[4];
+    Vec3f normal;
+    Vec4f color;
+    Plane() {}
+    Plane(Vec3f *pts) {
+        points[0] = pts[0];
+        points[1] = pts[1];
+        points[2] = pts[2];
+        points[3] = pts[3];
+
+        Vec3f ab = points[1] - points[0];
+        Vec3f ac = points[2] - points[0];
+        normal = (ac^ab).normalize();
+        color = Vec4f(0.5, 0.5, 0.5, 1.0);
+    }
+    ~Plane() {}
+};
 }
 #endif // __OBJECTS_H__

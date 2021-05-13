@@ -19,7 +19,8 @@ private:
 	// Sample2D *specularmap_;
 public:
 	Model(const char *filename);
-	Model(std::vector<Vec3f> &_verts, std::vector<Face> _faces);
+	Model(Plane plane);
+	Model(std::vector<Vec3f> &_verts, std::vector<Face> &_faces);
 	~Model();
 
 	int nverts();
