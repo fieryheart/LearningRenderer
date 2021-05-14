@@ -192,11 +192,12 @@ public:
 class ShadowShader : public Shader {
 public:
     Matrix uniform_mat_transform;
+    Matrix uniform_mat_transform_i;
     Matrix uniform_mat_norm_transform;
     Matrix uniform_mat_depth_transform;
     Vec3f uniform_camera;
     Vec3f uniform_light;
-    Vec3f varying_vertex[3];
+    Vec4f varying_vertex[3];
     Vec3f varying_normal[3];
     Vec2f varying_uv[3];
     Frame *depthFrame;
@@ -206,11 +207,11 @@ public:
         _normal = (uniform_mat_norm_transform*_normal).normalize();
         varying_normal[in.nthvert] = _normal.v3f();
 
-        varying_vertex[in.nthvert] = in.v;
         Vec4f vertex = Vec4f(in.v, 1.0f);
         vertex = uniform_mat_transform*vertex;
         vertex = vertex / vertex.w;
         out.sCoord = vertex;
+        varying_vertex[in.nthvert] = vertex;
 
         // tex
         Vec2f uv = in.model->tex(in.nthface, in.nthvert);
@@ -220,14 +221,14 @@ public:
     virtual bool fragment(const InFragment &in, OutFragment &out) {
         Vec3f bar = in.bar;
         Vec3f dir = uniform_light;
-        Vec3f v = varying_vertex[0]*bar[0]+varying_vertex[1]*bar[1]+varying_vertex[2]*bar[2];
-        
+        Vec4f sv = varying_vertex[0]*bar[0]+varying_vertex[1]*bar[1]+varying_vertex[2]*bar[2];
+        Vec4f v = uniform_mat_transform_i*sv;
+
         // if shadow
-        Vec4f v4f = Vec4f(v, 1.0f);
-        v4f = uniform_mat_depth_transform*v4f;
-        v4f = v4f / v4f.w;
-        float z = depthFrame->get(int(v4f.x+.5f), int(v4f.y+.5f))[0];
-        if (v4f.z > z + 0.003f) {
+        Vec4f dv = uniform_mat_depth_transform*v;
+        dv = dv / dv.w;
+        float z = depthFrame->get(int(dv.x+.5f), int(dv.y+.5f))[0];
+        if (dv.z < z - 0.003f) {
             out.color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
             return false;
         }
@@ -235,7 +236,7 @@ public:
         Vec3f N = varying_normal[0]*bar[0]+varying_normal[1]*bar[1]+varying_normal[2]*bar[2];
         float diffuse = std::max(0.0f, dir*N);
 
-        Vec3f view = uniform_camera-v;
+        Vec3f view = uniform_camera-v.v3f();
         Vec3f h = (view + dir).normalize();
         float a = std::max(0.0f, h*N);
         float specular = std::pow(a, 100.f);
@@ -258,14 +259,41 @@ public:
 class PlaneShader : public Shader {
 public:
     Matrix uniform_mat_transform;
+    Matrix uniform_mat_transform_i;
+    Matrix uniform_mat_depth_transform;
     Vec4f uniform_color;
+    Frame *depthFrame;
+
+    Vec4f varying_vertex[3];
+    // Vec4f varying_depth_vertex[3];
+
     virtual void vertex(const InVectex &in, OutVectex &out) {
         Vec4f vertex = Vec4f(in.v, 1.0f);
         vertex = uniform_mat_transform*vertex;
         vertex = vertex / vertex.w;
         out.sCoord = vertex;
+        varying_vertex[in.nthvert] = vertex;
+
+        // wrong!
+        // Vec4f dv = Vec4f(in.v, 1.0f);
+        // dv = uniform_mat_depth_transform*dv;
+        // dv = dv / dv.w;
+        // varying_depth_vertex[in.nthvert] = dv;
     }
     virtual bool fragment(const InFragment &in, OutFragment &out) {
+        Vec3f bar = in.bar;
+        Vec4f sv = varying_vertex[0]*bar[0]+varying_vertex[1]*bar[1]+varying_vertex[2]*bar[2];
+        
+        // if shadow
+        Vec4f dv = uniform_mat_depth_transform*uniform_mat_transform_i*sv;
+        // Vec4f dv = varying_depth_vertex[0]*bar[0]+varying_depth_vertex[1]*bar[1]+varying_depth_vertex[2]*bar[2]; wrong!
+        dv = dv / dv.w;
+        float z = depthFrame->get(int(dv.x+.5f), int(dv.y+.5f))[0];
+        if (dv.z < z - 0.003f) {
+            out.color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+            return false;
+        }
+
         out.color = uniform_color;
         return false;
     }

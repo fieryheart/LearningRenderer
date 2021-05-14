@@ -281,104 +281,111 @@ void Example06() {
     depthFrame.id = 1;
     QGL::Frame frame = QGL::Frame(width, height, 4);
     frame.id = 2;
+
     QGL::Zbuffer zbuffer = QGL::Zbuffer(width, height);
+    QGL::RenderNode rn;
     QGL::Log log = QGL::Log(true, "Depth Shading: ");
     QGL::Timer timer = QGL::Timer();
     // QGL::NUMTHREADS = 8;
  
-    QGL::Model *model = new QGL::Model("../obj/Marry.obj");
-    model->vertsNormalize();
-    model->loadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
+    // Marry Model
+    QGL::Model *marry = new QGL::Model("../obj/Marry.obj");
+    marry->vertsNormalize();
+    marry->loadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
 
-
-    // Plane
-    Vec3f pts[4] = {Vec3f(-0.5, 0, 0.5), Vec3f(-0.5, 0, -0.5),
-                    Vec3f(0.5, 0, 0.5),  Vec3f(0.5, 0, -0.5)};
+    // Plane Model
+    Vec3f pts[4] = {Vec3f(-0.7, 0, 0.5), Vec3f(-0.7, 0, -0.8),
+                    Vec3f(0.7, 0, 0.5),  Vec3f(0.7, 0, -0.8)};
     QGL::Plane plane = QGL::Plane(pts);
     QGL::Model *planeModel = new QGL::Model(plane);
 
 
+    // Set camera from light
+    timer.update();
+    log = QGL::Log(true, "Depth Shading: ");
+
+    QGL::SetModelMat();
+    QGL::SetViewMat(dl.pos, origin, up);
+    // QGL::SetPerspectiveProjectMat(camera, origin);
+    QGL::SetScreenMat(0, 0, 800, 800, depth);
+    QGL::SetCamera(true);
+
+    // Depth Shader
+    QGL::DepthShader depthShader = QGL::DepthShader();
+    depthShader.uniform_mat_transform = QGL::MAT_TRANS;
+    
+    // 
+    rn.shader = &depthShader;
+    rn.frame = &depthFrame;
+    rn.zbuffer = &zbuffer;
+    rn.log = &log;
+    rn.comType = QGL::CT_Single;
+    //
+    rn.model = marry;
+    QGL::Rendering(rn);
+    // 
+    rn.model = planeModel;
+    QGL::Rendering(rn);
+
+    std::cout << timer.second() << "s" << std::endl;
+
+
+    // Marry && Plane
+    timer.update();
+
+    QGL::PlaneShader planeShader = QGL::PlaneShader();
+    QGL::ShadowShader shadowShader = QGL::ShadowShader();
+    planeShader.uniform_mat_depth_transform = QGL::MAT_TRANS;
+    shadowShader.uniform_mat_depth_transform = QGL::MAT_TRANS;
+    planeShader.depthFrame = &depthFrame;
+    shadowShader.depthFrame = &depthFrame;
+    // 
+    rn.frame = &frame;
+    zbuffer.clear();
+    //
     QGL::SetModelMat();
     QGL::SetViewMat(camera, origin, up);
     QGL::SetPerspectiveProjectMat(camera, origin);
     QGL::SetScreenMat(0, 0, 800, 800, depth);
     QGL::SetCamera(true);
-    QGL::PlaneShader planeShader = QGL::PlaneShader();
-    planeShader.uniform_mat_transform = QGL::MAT_TRANS;
-    planeShader.uniform_color = plane.color;
-    QGL::RenderNode rn;
-    rn.model = planeModel;
-    rn.shader = &planeShader;
-    rn.frame = &frame;
-    rn.zbuffer = &zbuffer;
-    rn.log = &log;
-    rn.comType = QGL::CT_Single;    
-    log.prefix = "Plane Shading: ";
-    timer.update();
+
+    // Marry
+    log = QGL::Log(true, "Shadow Shading: ");
+
+    shadowShader.uniform_mat_transform = QGL::MAT_TRANS;
+    shadowShader.uniform_mat_transform_i = (QGL::MAT_TRANS).inverse(); 
+    shadowShader.uniform_mat_norm_transform = QGL::MAT_NORM_TRANS;
+    shadowShader.uniform_camera = camera;
+    shadowShader.uniform_light = -dl.dir;
+    
+    rn.shader = &shadowShader;
+    rn.model = marry;
     QGL::Rendering(rn);
+
+    // Plane
+    log = QGL::Log(true, "Plane Shading: ");
+    planeShader.uniform_mat_transform = QGL::MAT_TRANS;
+    planeShader.uniform_mat_transform_i = (QGL::MAT_TRANS).inverse();
+    planeShader.uniform_color = plane.color;
+
+    rn.shader = &planeShader;
+    rn.model = planeModel;
+    QGL::Rendering(rn);
+
     std::cout << timer.second() << "s" << std::endl;
 
-
-    // Set camera from light
-    // std::cout << "set camera from light." << std::endl;
-    // QGL::SetModelMat();
-    // QGL::SetViewMat(dl.pos, origin, up);
-    // // QGL::SetPerspectiveProjectMat(camera, origin);
-    // QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
-    // QGL::SetCamera(true);
-
-    // // Depth Shader
-    // std::cout << "set Depth Shader." << std::endl;
-    // QGL::DepthShader depthShader = QGL::DepthShader();
-    // depthShader.uniform_mat_transform = QGL::MAT_TRANS;
-    // // Get z-buffer
-    // QGL::RenderNode rn;
-    // rn.model = model;
-    // rn.shader = &depthShader;
-    // rn.frame = &depthFrame;
-    // rn.zbuffer = &zbuffer;
-    // rn.log = &log;
-    // rn.comType = QGL::CT_Single;
-    // std::cout << "Get z-buffer" << std::endl;
-    // QGL::Timer timer = QGL::Timer();
-    // timer.update();
-    // QGL::Rendering(rn);
-    // std::cout << timer.second() << "s" << std::endl;
-
-
-    // std::cout << "set Shadow Shader." << std::endl;
-    // log = QGL::Log(true, "Shadow Shading: ");
-    // QGL::ShadowShader shadowShader = QGL::ShadowShader();
-    // shadowShader.uniform_mat_depth_transform = QGL::MAT_TRANS;
-    // // Set camera from eye
-    // std::cout << "Set camera from eye." << std::endl;
-    // QGL::SetModelMat();
-    // QGL::SetViewMat(camera, origin, up);
-    // QGL::SetPerspectiveProjectMat(camera, origin);
-    // QGL::SetScreenMat(-100, -350, 1000, 1000, depth);
-    // QGL::SetCamera(true);    
-
-    // shadowShader.uniform_mat_transform = QGL::MAT_TRANS;    
-    // shadowShader.uniform_mat_norm_transform = QGL::MAT_NORM_TRANS;
-    // shadowShader.uniform_camera = camera;
-    // shadowShader.uniform_light = -dl.dir;
-    // shadowShader.depthFrame = &depthFrame;
-
-    // rn.shader = &shadowShader;
-    // rn.frame = &frame;
-    // zbuffer.clear();
-
-    // std::cout << "Render Shadow." << std::endl;
-    // timer.update();
-    // QGL::Rendering(rn);
-    // std::cout << timer.second() << "s" << std::endl;
+    std::cout << "draw depth frame." << std::endl;
+    std::string out_depth = "../example/out_depth.png";
+    depthFrame.flip();
+    depthFrame.draw(out_depth.c_str());
 
     std::cout << "draw frame." << std::endl;
     std::string out = "../example/out.png";
     frame.flip();
     frame.draw(out.c_str());
 
-    delete model;
+    // delete planeModel;
+    delete marry;
 }
 
 void ExampleOmp() {
