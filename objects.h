@@ -161,10 +161,19 @@ struct Face {
     Face(Vec3i v, Vec3i vn, Vec3i vt) : v(v), vn(vn), vt(vt){}
 };
 
+struct Ray {
+    Vec3f pos;
+    Vec3f dir;
+    Ray(){}
+    Ray(Vec3f pos, Vec3f dir) : pos(pos), dir(dir) {}
+    ~Ray(){}
+    Vec3f launch(float t) {return pos+dir*t;}
+};
 
 // 
 struct Object {
     virtual ~Object() {};
+    virtual bool interact(Ray &ray, float t) = 0;
 };
 
 
@@ -194,6 +203,27 @@ struct Object {
 //     }
 // };
 
+// struct Triangle : Object {
+//     Vec3f points[3];
+//     Vec3f normal;
+//     Vec3f minp, maxp;
+//     Vec3f centroid;
+//     Triangle() {}
+//     Triangle(Vec3f A, Vec3f B, Vec3f C) {
+//         points[0] = A;
+//         points[1] = B;
+//         points[2] = C;
+//         Vec3f ab = B - A;
+//         Vec3f ac = C - A;
+//         normal = (ac^ab).normalize();
+//         for (int i = 0; i < 3; ++i) {
+//             minp[i] = std::min(A[i], std::min(B[i], C[i]));
+//             maxp[i] = std::max(A[i], std::max(B[i], C[i]));
+//             centroid[i] = (minp[i]+maxp[i])/2.0f;
+//         }
+//     }
+// }
+
 // 四边形： 点、法向量
 struct Plane : Object {
     Vec3f points[4];
@@ -212,6 +242,10 @@ struct Plane : Object {
         color = Vec4f(0.5, 0.5, 0.5, 1.0);
     }
     ~Plane() {}
+    bool interact(Ray &ray, float t) {
+        // todo
+        return true;
+    }
 };
 }
 #endif // __OBJECTS_H__

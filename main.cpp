@@ -272,6 +272,7 @@ void Example05() {
 */
 
 // Phong Shader with hard shadow
+/*
 void Example06() {
     const Vec3f camera(1,1,1);
     const Vec3f origin(0,0,0);
@@ -387,6 +388,16 @@ void Example06() {
     // delete planeModel;
     delete marry;
 }
+*/
+void Example07() {
+    QGL::AxisAlignedBoundBox aabb = QGL::AxisAlignedBoundBox(1.0f, 2.0f, 1.0f, 2.0f, 1.0f, 2.0f);
+    Vec3f pos = Vec3f(0.0f, 0.0f, 0.0f);
+    Vec3f dir = (Vec3f(1.0f, 1.0f, 1.5f)).normalize();
+    QGL::Ray ray = QGL::Ray(pos, dir);
+    float t = 0.0f;
+    bool isin = aabb.interact(ray, t);
+    // std::cout << "Interact: " << isin << std::endl;
+}
 
 void ExampleOmp() {
     // std::cout << "Num theads supported: " << omp_get_num_procs() << std::endl;
@@ -402,7 +413,7 @@ void ExampleOmp() {
 
 int main(int argc, char** argv) {
 
-    Example06();
+    Example07();
 
     return 0;
 }

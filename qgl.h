@@ -3,6 +3,7 @@
 
 #include "model.h"
 #include "shaders.h"
+#include "RayTracing.h"
 
 namespace QGL {
 struct RenderNode {
