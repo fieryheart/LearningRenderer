@@ -105,6 +105,7 @@ void Example02() {
 */
 
 // 加载纹理图片
+/*
 void Example03() {
     const Vec3f light(1,1,1);
     const Vec3f camera(1,1,1);
@@ -158,6 +159,7 @@ void Example03() {
     delete model;
     // delete[] zbuffer;
 }
+*/
 
 // Gouraud Shader
 /*
@@ -390,12 +392,42 @@ void Example06() {
 }
 */
 void Example07() {
-    QGL::AxisAlignedBoundBox aabb = QGL::AxisAlignedBoundBox(1.0f, 2.0f, 1.0f, 2.0f, 1.0f, 2.0f);
-    Vec3f pos = Vec3f(0.0f, 0.0f, 0.0f);
-    Vec3f dir = (Vec3f(1.0f, 1.0f, 1.5f)).normalize();
-    QGL::Ray ray = QGL::Ray(pos, dir);
-    float t = 0.0f;
-    bool isin = aabb.interact(ray, t);
+    Vec3f camera = Vec3f(0.0f, 0.0f, 0.0f);
+    QGL::Frame frame = QGL::Frame(width, height, 4);
+    // Test BVH
+    QGL::RenderPTNode rn;
+    rn.frame = &frame;
+    rn.camera = camera;
+    rn.width = width;
+    rn.height = height;
+    rn.fov = M_PI/2;
+    rn.bound = 1;
+
+    // Plane Model
+    Vec3f pts[4] = {Vec3f(-0.5, -0.5, -1), Vec3f(-0.5, 0.5, -1),
+                    Vec3f(0.5, -0.5, -1),  Vec3f(0.5, 0.5, -1)};
+    Vec4f color = Vec4f(1.0f, 0.0f, 0.0f, 1.0f);
+    QGL::Plane plane = QGL::Plane(pts, color);
+    QGL::Model *planeModel = new QGL::Model(plane);
+
+    std::vector<QGL::Model*> models;
+    models.push_back(planeModel);
+
+    rn.models = models;
+
+    QGL::RenderingByPathTracing(rn);
+
+    std::cout << "draw frame." << std::endl;
+    std::string out = "../example/out.png";
+    // frame.flip();
+    frame.draw(out.c_str());
+
+    // Test AxisAlignedBoundBox
+    // QGL::AxisAlignedBoundBox aabb = QGL::AxisAlignedBoundBox(1.0f, 2.0f, 1.0f, 2.0f, 1.0f, 2.0f);
+    // Vec3f pos = Vec3f(0.0f, 0.0f, 0.0f);
+    // Vec3f dir = (Vec3f(1.0f, 1.0f, 1.5f)).normalize();
+    // QGL::Ray ray = QGL::Ray(pos, dir);
+    // bool isin = aabb.interact(ray);
     // std::cout << "Interact: " << isin << std::endl;
 }
 

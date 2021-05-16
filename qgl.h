@@ -17,6 +17,17 @@ struct RenderNode {
     RenderNode() {}
 };
 
+struct RenderPTNode {
+    Frame *frame;
+    std::vector<Model*> models;
+    Vec3f camera;
+    int width;
+    int height;
+    float fov;
+    int bound;
+    RenderPTNode(){}
+};
+
 extern int NUMTHREADS;
 
 extern Matrix MAT_MODEL;   // 模型空间
@@ -27,6 +38,8 @@ extern Matrix MAT_SCREEN;  // 屏幕空间
 extern Matrix MAT_TRANS;
 extern Matrix MAT_NORM_TRANS;
 extern Matrix MAT_NORM_IT;
+
+extern Vec4f BACKGROUND_COLOR;
 
 void SetModelMat();
 void SetViewMat(Vec3f eye, Vec3f center, Vec3f up);
@@ -47,6 +60,11 @@ void SingleRendering(RenderNode &rn);
 void OmpRendering(RenderNode &rn);
 
 void DrawTriangle(Vec4f *points, RenderNode &rn);
+
+
+// 路径追踪
+void RenderingByPathTracing(RenderPTNode &in);
+Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int depth, int &limit);
 }
 
 

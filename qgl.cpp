@@ -8,15 +8,16 @@ namespace QGL {
 
 int NUMTHREADS = 1;
 
-Matrix MAT_MODEL = Matrix::identity(4);;   // 模型空间
-Matrix MAT_VIEW = Matrix::identity(4);;    // 相机空间
-Matrix MAT_PPROJECT = Matrix::identity(4);; // 透视投影空间
-Matrix MAT_OPROJECT = Matrix::identity(4);; // 正交投影空间
-Matrix MAT_SCREEN = Matrix::identity(4);;  // 屏幕空间
-Matrix MAT_TRANS = Matrix::identity(4);;
-Matrix MAT_NORM_TRANS = Matrix::identity(4);;
-Matrix MAT_NORM_IT = Matrix::identity(4);;
+Matrix MAT_MODEL = Matrix::identity(4);     // 模型空间
+Matrix MAT_VIEW = Matrix::identity(4);      // 相机空间
+Matrix MAT_PPROJECT = Matrix::identity(4);   // 透视投影空间
+Matrix MAT_OPROJECT = Matrix::identity(4);   // 正交投影空间
+Matrix MAT_SCREEN = Matrix::identity(4);     // 屏幕空间
+Matrix MAT_TRANS = Matrix::identity(4);
+Matrix MAT_NORM_TRANS = Matrix::identity(4);
+Matrix MAT_NORM_IT = Matrix::identity(4);
 
+Vec4f BACKGROUND_COLOR = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
 
 /*! \brief Convert RGB to HSV color space
   Copy from https://gist.github.com/fairlight1337/4935ae72bcbcc1ba5c72
@@ -369,6 +370,88 @@ void DrawTriangle(Vec4f *points, RenderNode &rn) {
     //     if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
     //     zbuffer[P.x+width*P.y] = depth;
     // }
+}
+
+// 路径追踪
+void RenderingByPathTracing(RenderPTNode &in) {
+    BVHBuilder *bvh = new BVHBuilder(in.models);
+
+    Frame *frame = in.frame;
+    Vec3f pos = in.camera;
+    int width = in.width, height = in.height;
+    float fov = in.fov;
+    int bound = in.bound;
+
+    Ray ray;
+    ray.pos = pos;
+    Vec4f color;
+
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            float x = (2.0f*(i/(float)width)-1.0f)*tan(fov/2)*width/height;
+            float y = -(2.0f*(j/(float)height)-1.0f)*tan(fov/2);     // y 在数据中向下为正
+            Vec3f dir = (Vec3f(x, y, -1)).normalize();
+            // std::cout << dir;
+            ray.dir = dir;
+            color = RayTracing(bvh, ray, 1, bound);
+            frame->set(i, j, color);
+        }
+    }
+
+
+    // Test:
+    // Vec3f pos = Vec3f(0,0,0);
+    // Vec3f dir = (Vec3f(0,0.5,-1)).normalize();
+    // Ray ray = Ray(pos, dir);
+    // std::vector<int> indices;
+    // bvh->interact(ray, indices);
+    // float t = std::numeric_limits<float>::max();
+    // Vec3f bc;
+    // int idx;
+    // for (int i = 0; i < indices.size(); ++i) {
+    //     std::cout << "Triangle: " << indices[i] << std::endl;
+
+    //     idx = indices[i];
+    //     bvh->tris[idx]->interact(ray, t, bc);
+    // }
+    // std::cout << t << " " << bc;
+    // Vec3f p = ray.launch(t);
+    // std::cout << "P: " << p;
+}
+
+Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int depth, int &limit) {
+    if (depth <= limit) {
+        std::vector<int> indices;
+        bvh->interact(ray, indices);
+
+        // get the nearest triangle which ray reaches.
+        InInteract in;
+        OutInteract out;
+        in.ray = ray;
+        in.t = std::numeric_limits<float>::max();
+        out.idx = -1;
+        for (int i = 0; i < indices.size(); ++i) {
+            in.idx = indices[i];
+            bvh->tris[indices[i]]->interact(in, out);
+
+            // 
+            // if (out.idx == 0) {
+            //     Vec3f p = ray.launch(out.t);
+            //     std::cout << p;
+            // }
+        }
+
+        if (out.idx == -1) {
+            return BACKGROUND_COLOR;
+        } else {
+            BVHTriangle *tri = bvh->tris[out.idx];
+            Vec3f bc = out.bc;
+            Vec4f color;
+            tri->model->sampleDiffuse(tri->nthface, bc, color);
+            return color;
+        }
+    }
+    return BACKGROUND_COLOR;
 }
 }
 

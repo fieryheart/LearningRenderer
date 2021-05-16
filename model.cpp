@@ -73,6 +73,12 @@ Model::Model(Plane plane) {
     normals.push_back(plane.normal);
     faces.push_back(Face(Vec3i(0, 1, 2)));
     faces.push_back(Face(Vec3i(1, 2, 3)));
+    colors.push_back(plane.colors[0]);
+    colors.push_back(plane.colors[0]);
+    colors.push_back(plane.colors[0]);
+    colors.push_back(plane.colors[0]);
+
+    diffusemap_ = NULL;
 }
 
 Model::Model(std::vector<Vec3f> &_verts, std::vector<Face> &_faces) {
@@ -169,7 +175,21 @@ void Model::loadMap(const char *filename, MapType mt) {
 }
 
 void Model::sampleDiffuse(Vec2f uv, Vec4f &color) {
-    diffusemap_->sample(uv, color);
+    if (diffusemap_) {
+        diffusemap_->sample(uv, color);
+    } else {
+        color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+    }
+}
+void Model::sampleDiffuse(int nthface, Vec3f bc, Vec4f &color) {
+    if (!diffusemap_) {
+        color = Vec4f(0.0f, 0.0f, 0.0f, 0.0f);
+        for (int i = 0; i < 3; ++i) {
+            color = color + colors[faces[nthface].v[i]]*bc[i];
+        }
+    } else {
+        color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+    }
 }
 }
 

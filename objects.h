@@ -173,7 +173,7 @@ struct Ray {
 // 
 struct Object {
     virtual ~Object() {};
-    virtual bool interact(Ray &ray, float t) = 0;
+    virtual bool interact(Ray &ray, float &t) = 0;
 };
 
 
@@ -228,9 +228,9 @@ struct Object {
 struct Plane : Object {
     Vec3f points[4];
     Vec3f normal;
-    Vec4f color;
+    Vec4f colors[4];
     Plane() {}
-    Plane(Vec3f *pts) {
+    Plane(Vec3f *pts, Vec4f &color_) {
         points[0] = pts[0];
         points[1] = pts[1];
         points[2] = pts[2];
@@ -239,10 +239,14 @@ struct Plane : Object {
         Vec3f ab = points[1] - points[0];
         Vec3f ac = points[2] - points[0];
         normal = (ac^ab).normalize();
-        color = Vec4f(0.5, 0.5, 0.5, 1.0);
+
+        colors[0] = color_;
+        colors[1] = color_;
+        colors[2] = color_;
+        colors[3] = color_;
     }
     ~Plane() {}
-    bool interact(Ray &ray, float t) {
+    bool interact(Ray &ray, float &t) {
         // todo
         return true;
     }

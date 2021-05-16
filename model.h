@@ -14,6 +14,7 @@ private:
 	std::vector<Vec3f> normals;
 	std::vector<Vec2f> textures;
 	std::vector<Face> faces;
+	std::vector<Vec4f> colors;
 	Sample2D *diffusemap_;
 	// Sample2D *normalmap_;
 	// Sample2D *specularmap_;
@@ -25,13 +26,15 @@ public:
 
 	int nverts();
 	int nfaces();
+	Face face(int nthface);
 	Vec3f vert(int nthface, int nthvert);
 	Vec3f norm(int nthface, int nthvert);
 	Vec2f tex(int nthface, int nthvert);
 	void vertsNormalize();	// 顶点数据映射至[-1, 1]
 	void loadMap(const char *filename, MapType mt);
-	void sampleDiffuse(Vec2i uv, Vec4f &color);
+	// void sampleDiffuse(Vec2i uv, Vec4f &color);
 	void sampleDiffuse(Vec2f uv, Vec4f &color);
+	void sampleDiffuse(int nthface, Vec3f bc, Vec4f &color);
 };
 }
 
