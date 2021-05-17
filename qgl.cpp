@@ -7,7 +7,7 @@
 
 namespace QGL {
 
-int NUMTHREADS = 1;
+int NUM_THREADS = 8;
 
 Matrix MAT_MODEL = Matrix::identity(4);     // 模型空间
 Matrix MAT_VIEW = Matrix::identity(4);      // 相机空间
@@ -21,7 +21,7 @@ Matrix MAT_NORM_IT = Matrix::identity(4);
 Vec4f BACKGROUND_COLOR = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
 
 
-int PATH_TRACING_N = 10;
+int PATH_TRACING_N = 1;
 float PATH_TRACING_P_RR = 0.5;
 std::mt19937 PATH_TRACING_RNG;
 std::uniform_real_distribution<float> PATH_TRACING_UNIFORM_DIST = std::uniform_real_distribution<float>(0, 1);
@@ -286,7 +286,7 @@ void OmpRendering(RenderNode &rn) {
     Vec4f screen_coords[3];
     int nfaces = model->nfaces();
 
-    #pragma omp parallel for num_threads(NUMTHREADS)
+    #pragma omp parallel for num_threads(NUM_THREADS)
     for (int i = 0; i < nfaces; ++i) {
         for (int j = 0; j < 3; ++j) {
             Vec3f v = model->vert(i, j);
@@ -405,13 +405,6 @@ void RenderingByPathTracing(RenderPTNode &in) {
     float fov = in.fov;
     int bound = in.bound;
 
-    Ray ray;
-    ray.pos = pos;
-    Vec4f color = Vec4f(0.0f);
-
-    float x, y;
-    Vec3f dir;
-
     // Test: one ray
     // for (int k = 0; k < PATH_TRACING_N; ++k) {
     //     std::cout << "k: " << k << std::endl;
@@ -430,10 +423,16 @@ void RenderingByPathTracing(RenderPTNode &in) {
     // color[3] = 1.0f;
     // std::cout << "color: " << color;
 
+    #pragma omp parallel for num_threads(NUM_THREADS)
     for (int j = 0; j < height; ++j) {
         for (int i = 0; i < width; ++i) {
+            float x, y;
+            Vec3f dir;
+            Ray ray;
+            ray.pos = pos;
+            Vec4f color = Vec4f(0.0f);
+
             // uniformly choose N sample positions within the pixel
-            color = Vec4f(0.0f);
             for (int k = 0; k < PATH_TRACING_N; ++k) {
                 chooseN(i,j,x,y,k);
                 x = (2.0f*(x/(float)width)-1.0f)*tan(fov/2)*width/height;
@@ -513,7 +512,8 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, Model* light) {
         Vec3f N_p = tri->model->norm(0, 0);
         Vec3f N_lp = light->norm(0, 0);
 
-        p = p+N_p;
+        // !
+        p = p+N_p*0.5f;
 
         Vec3f w0 = (ray.pos-p).normalize();
         Vec3f w1 = (p-lp).normalize();

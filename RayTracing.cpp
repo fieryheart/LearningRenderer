@@ -99,7 +99,9 @@ void BVHTriangle::interact(InInteract &in, OutInteract &out) {
         // }
     // }
 
+
     // 当写成 b2>=0 或 1-b1-b2>=0时 会出现边界掉色，如example/error/PT_error_0
+    // 不判断 tt > 0，如example/error/PT_error_[1|2|3]
     if (tt > 0 && tt < t && b1 >= -MY_EPS && b2 >= -MY_EPS && 1-b1-b2 >= -MY_EPS) {
         in.t = tt;
         out.idx = in.idx;
