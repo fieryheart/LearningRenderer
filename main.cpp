@@ -404,16 +404,71 @@ void Example07() {
     rn.bound = 1;
 
     // Plane Model
-    Vec3f pts[4] = {Vec3f(-0.5, -0.5, -1), Vec3f(-0.5, 0.5, -1),
-                    Vec3f(0.5, -0.5, -1),  Vec3f(0.5, 0.5, -1)};
-    Vec4f color = Vec4f(1.0f, 0.0f, 0.0f, 1.0f);
-    QGL::Plane plane = QGL::Plane(pts, color);
-    QGL::Model *planeModel = new QGL::Model(plane);
+    // 中
+    Vec3f pts0[4] = {Vec3f(-50, -60, -100), Vec3f(-50, 60, -100),
+                    Vec3f(50, -60, -100),  Vec3f(50, 60, -100)};
+    Vec4f color0 = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
+    QGL::Plane plane0 = QGL::Plane(pts0, color0);
+    plane0.emission = 0.0f;
+    QGL::Model *planeModel0 = new QGL::Model(plane0);
+
+    // 左
+    Vec3f pts1[4] = {Vec3f(-60, -60, -50), Vec3f(-60, 60, -50), 
+                     Vec3f(-50, -60, -100), Vec3f(-50, 60, -100)};
+    Vec4f color1 = Vec4f(1.0f, 0.0f, 0.0f, 1.0f);
+    QGL::Plane plane1 = QGL::Plane(pts1, color1);
+    plane1.emission = 0.0f;
+    QGL::Model *planeModel1 = new QGL::Model(plane1);
+
+    // 上
+    Vec3f pts2[4] = {Vec3f(-50, 60, -100), Vec3f(-60, 60, -50),
+                    Vec3f(50, 60, -100),  Vec3f(60, 60, -50)};
+    Vec4f color2 = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
+    QGL::Plane plane2 = QGL::Plane(pts2, color2);
+    plane2.emission = 0.0f;
+    QGL::Model *planeModel2 = new QGL::Model(plane2);
+
+    // 右
+    Vec3f pts3[4] = {Vec3f(50, -60, -100), Vec3f(50, 60, -100),
+                     Vec3f(60, -60, -50),  Vec3f(60, 60, -50)};
+    Vec4f color3 = Vec4f(0.0f, 1.0f, 0.0f, 1.0f);
+    QGL::Plane plane3 = QGL::Plane(pts3, color3);
+    plane3.emission = 0.0f;
+    QGL::Model *planeModel3 = new QGL::Model(plane3);
+
+    // 下
+    Vec3f pts4[4] = {Vec3f(-60, -60, -50), Vec3f(-50, -60, -100),
+                     Vec3f(60, -60, -50),  Vec3f(50, -60, -100)};
+    Vec4f color4 = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
+    QGL::Plane plane4 = QGL::Plane(pts4, color4);
+    plane4.emission = 0.0f;
+    QGL::Model *planeModel4 = new QGL::Model(plane4);
+
+    // light
+    Vec3f pts5[4] = {Vec3f(-10, 59.9, -80), Vec3f(-10, 59.9, -70),
+                     Vec3f(10, 59.9, -80),  Vec3f(10, 59.9, -70)};
+    Vec4f color5 = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
+    QGL::Plane plane5 = QGL::Plane(pts5, color5);
+    plane5.emission = 150.0f;
+    QGL::Model *planeModel5 = new QGL::Model(plane5);    
 
     std::vector<QGL::Model*> models;
-    models.push_back(planeModel);
+    models.push_back(planeModel0);
+    models.push_back(planeModel1);
+    models.push_back(planeModel2);
+    models.push_back(planeModel3);
+    models.push_back(planeModel4);
+    models.push_back(planeModel5);
+
+    // std::cout<< "plane0.normal: " << plane0.normal << std::endl;
+    // std::cout<< "plane1.normal: " << plane1.normal << std::endl;
+    // std::cout<< "plane2.normal: " << plane2.normal << std::endl;
+    // std::cout<< "plane3.normal: " << plane3.normal << std::endl;
+    // std::cout<< "plane4.normal: " << plane4.normal << std::endl;
+    // std::cout<< "plane5.normal: " << plane5.normal << std::endl;
 
     rn.models = models;
+    rn.light = 5;
 
     QGL::RenderingByPathTracing(rn);
 

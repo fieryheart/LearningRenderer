@@ -229,6 +229,7 @@ struct Plane : Object {
     Vec3f points[4];
     Vec3f normal;
     Vec4f colors[4];
+    float emission;
     Plane() {}
     Plane(Vec3f *pts, Vec4f &color_) {
         points[0] = pts[0];

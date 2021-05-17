@@ -2,6 +2,7 @@
 #define __MODEL_H__
 
 #include <vector>
+#include <random>
 #include "objects.h"
 
 namespace QGL {
@@ -18,6 +19,12 @@ private:
 	Sample2D *diffusemap_;
 	// Sample2D *normalmap_;
 	// Sample2D *specularmap_;
+
+	std::vector<float> emissions;
+	float area;
+
+	std::mt19937 rng;
+	std::uniform_real_distribution<float> distribution;
 public:
 	Model(const char *filename);
 	Model(Plane plane);
@@ -35,6 +42,10 @@ public:
 	// void sampleDiffuse(Vec2i uv, Vec4f &color);
 	void sampleDiffuse(Vec2f uv, Vec4f &color);
 	void sampleDiffuse(int nthface, Vec3f bc, Vec4f &color);
+	Vec3f randomSample();
+	Vec3f randomSampleInP();
+	float emit();
+	float pdf();
 };
 }
 

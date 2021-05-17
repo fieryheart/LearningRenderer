@@ -77,6 +77,17 @@ Model::Model(Plane plane) {
     colors.push_back(plane.colors[0]);
     colors.push_back(plane.colors[0]);
     colors.push_back(plane.colors[0]);
+    emissions.push_back(plane.emission);
+    emissions.push_back(plane.emission);
+    emissions.push_back(plane.emission);
+    emissions.push_back(plane.emission);
+
+    float w = (verts[1]-verts[0]).norm();
+    float h = (verts[2]-verts[0]).norm();
+    area = w*h;
+
+    rng.seed(std::random_device()());
+    distribution = std::uniform_real_distribution<float>(-1, 1);
 
     diffusemap_ = NULL;
 }
@@ -190,6 +201,30 @@ void Model::sampleDiffuse(int nthface, Vec3f bc, Vec4f &color) {
     } else {
         color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
     }
+}
+
+Vec3f Model::randomSample() {
+    float r0 = std::abs(distribution(rng));
+    float r1 = std::abs(distribution(rng));
+    Vec3f randP = verts[0] + (verts[1]-verts[0])*r0;
+    randP = randP + (verts[3]-verts[1])*r1;
+    return randP;
+}
+
+Vec3f Model::randomSampleInP() {
+    float r0 = distribution(rng);
+    float r1 = distribution(rng);
+    Vec3f x = (verts[1]-verts[0]).normalize();
+    Vec3f y = (x^normals[0]).normalize();
+    return (x*r0+y*r1).normalize();
+}
+
+float Model::emit() {
+    return emissions[0];
+}
+
+float Model::pdf() {
+    return 1.0f/area;
 }
 }
 

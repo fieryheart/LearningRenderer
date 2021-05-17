@@ -1,6 +1,7 @@
 #include <cmath>
 #include <limits>
 #include <cstdlib>
+#include <random>
 #include <iostream>
 #include "qgl.h"
 
@@ -18,6 +19,12 @@ Matrix MAT_NORM_TRANS = Matrix::identity(4);
 Matrix MAT_NORM_IT = Matrix::identity(4);
 
 Vec4f BACKGROUND_COLOR = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+
+
+int PATH_TRACING_N = 10;
+float PATH_TRACING_P_RR = 0.5;
+std::mt19937 PATH_TRACING_RNG;
+std::uniform_real_distribution<float> PATH_TRACING_UNIFORM_DIST = std::uniform_real_distribution<float>(0, 1);
 
 /*! \brief Convert RGB to HSV color space
   Copy from https://gist.github.com/fairlight1337/4935ae72bcbcc1ba5c72
@@ -372,8 +379,24 @@ void DrawTriangle(Vec4f *points, RenderNode &rn) {
     // }
 }
 
+void chooseN(int i, int j, float &x, float &y, int k) {
+    float cx = i + 0.5f, cy = j + 0.5f;
+    float r = 2*M_PI/PATH_TRACING_N*k;
+    x = cx + 0.5*cos(r);
+    y = cy + 0.5*sin(r);
+}
+
+void randomP(Vec3f minP, Vec3f maxP, Vec3f &randP) {
+
+}
+
 // 路径追踪
 void RenderingByPathTracing(RenderPTNode &in) {
+
+    // 初始化随机种子
+    std::mt19937 PATH_TRACING_RNG;
+    PATH_TRACING_RNG.seed(std::random_device()());
+
     BVHBuilder *bvh = new BVHBuilder(in.models);
 
     Frame *frame = in.frame;
@@ -384,16 +407,43 @@ void RenderingByPathTracing(RenderPTNode &in) {
 
     Ray ray;
     ray.pos = pos;
-    Vec4f color;
+    Vec4f color = Vec4f(0.0f);
 
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            float x = (2.0f*(i/(float)width)-1.0f)*tan(fov/2)*width/height;
-            float y = -(2.0f*(j/(float)height)-1.0f)*tan(fov/2);     // y 在数据中向下为正
-            Vec3f dir = (Vec3f(x, y, -1)).normalize();
+    float x, y;
+    Vec3f dir;
+
+    // Test: one ray
+    // for (int k = 0; k < PATH_TRACING_N; ++k) {
+    //     std::cout << "k: " << k << std::endl;
+    //     chooseN(150, 50, x, y, k);
+    //     x = (2.0f*(x/(float)width)-1.0f)*tan(fov/2)*width/height;
+    //     y = -(2.0f*(y/(float)height)-1.0f)*tan(fov/2);  // y 在数据中向下为正
+    //     dir = (Vec3f(x, y, -1)).normalize();
+    //     // std::cout << x << " " << y << std::endl;
+    //     // std::cout << dir;
+    //     ray.dir = dir;
+    //     Vec4f cl = RayTracing(bvh, ray, in.models[in.light]);
+    //     cl = cl / (PATH_TRACING_N*1.0f);
+    //     color = color + cl;
+    //     // std::cout << color;
+    // }
+    // color[3] = 1.0f;
+    // std::cout << "color: " << color;
+
+    for (int j = 0; j < height; ++j) {
+        for (int i = 0; i < width; ++i) {
+            // uniformly choose N sample positions within the pixel
+            color = Vec4f(0.0f);
+            for (int k = 0; k < PATH_TRACING_N; ++k) {
+                chooseN(i,j,x,y,k);
+                x = (2.0f*(x/(float)width)-1.0f)*tan(fov/2)*width/height;
+                y = -(2.0f*(y/(float)height)-1.0f)*tan(fov/2);  // y 在数据中向下为正
+                dir = (Vec3f(x, y, -1)).normalize();
+                ray.dir = dir;
+                color = color + RayTracing(bvh, ray, in.models[in.light]) / (PATH_TRACING_N*1.0f);
+            }
             // std::cout << dir;
-            ray.dir = dir;
-            color = RayTracing(bvh, ray, 1, bound);
+            color[3] = 1.0f;
             frame->set(i, j, color);
         }
     }
@@ -419,39 +469,128 @@ void RenderingByPathTracing(RenderPTNode &in) {
     // std::cout << "P: " << p;
 }
 
-Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int depth, int &limit) {
-    if (depth <= limit) {
-        std::vector<int> indices;
-        bvh->interact(ray, indices);
-
-        // get the nearest triangle which ray reaches.
-        InInteract in;
-        OutInteract out;
-        in.ray = ray;
-        in.t = std::numeric_limits<float>::max();
-        out.idx = -1;
-        for (int i = 0; i < indices.size(); ++i) {
-            in.idx = indices[i];
-            bvh->tris[indices[i]]->interact(in, out);
-
-            // 
-            // if (out.idx == 0) {
-            //     Vec3f p = ray.launch(out.t);
-            //     std::cout << p;
-            // }
-        }
-
-        if (out.idx == -1) {
-            return BACKGROUND_COLOR;
-        } else {
-            BVHTriangle *tri = bvh->tris[out.idx];
-            Vec3f bc = out.bc;
-            Vec4f color;
-            tri->model->sampleDiffuse(tri->nthface, bc, color);
-            return color;
-        }
+bool RayInteract(BVHBuilder *bvh, Ray &ray, int &index, Vec3f &bc, Vec3f &p) {
+    std::vector<int> indices;
+    bvh->interact(ray, indices);
+    // get the nearest triangle which ray reaches.
+    InInteract in;
+    OutInteract out;
+    in.ray = ray;
+    in.t = std::numeric_limits<float>::max();
+    out.idx = -1;
+    for (int i = 0; i < indices.size(); ++i) {
+        in.idx = indices[i];
+        bvh->tris[indices[i]]->interact(in, out);
     }
-    return BACKGROUND_COLOR;
+    if (out.idx == -1) {
+        index = -1;
+        return false;
+    } else {
+        index = out.idx;
+        bc = out.bc;
+        p = ray.launch(out.t);
+
+        // std::cout << "tri:" << bvh->tris[index]->vert[0];
+        // std::cout << "tri:" << bvh->tris[index]->vert[1];
+        // std::cout << "tri:" << bvh->tris[index]->vert[2];
+        // std::cout << "RayInteract: " << out.t << std::endl;
+        return true;
+    }
+}
+
+Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, Model* light) {
+    int index;
+    Vec3f bc;
+    Vec3f p, next_p;
+    Vec4f diffuse;
+    if (RayInteract(bvh, ray, index, bc, p)) {
+        Vec4f E = Vec4f(0.0f), L_dir = Vec4f(0.0f), L_indir = Vec4f(0.0f);
+        float kr = 0.0;
+        // Contribution from the light source
+        BVHTriangle *tri = bvh->tris[index];
+        // uniformly sample the light.
+        Vec3f lp = light->randomSample();
+        Vec3f N_p = tri->model->norm(0, 0);
+        Vec3f N_lp = light->norm(0, 0);
+
+        p = p+N_p;
+
+        Vec3f w0 = (ray.pos-p).normalize();
+        Vec3f w1 = (p-lp).normalize();
+
+        float L_i = light->emit();
+        float f_r = 1 / (2*M_PI);
+        float dis = (p-lp).norm2();
+        
+        // std::cout << "p: " << p;
+        // std::cout << "N_p" << N_p;
+        // std::cout << "lp: " << lp;
+        // std::cout << "N_lp: " << N_lp;
+        // std::cout << "w1: " << w1;
+        // std::cout << L_i << " " << f_r << " " << (N_p*w0) << " " << (N_lp*w1) << " " << dis << " " << light->pdf() << std::endl;
+        
+        kr = L_i * f_r * (N_p*w0) * (N_lp*w1) / dis / light->pdf();
+        kr = std::max(0.0f, kr);
+        // std::cout << "kr: " << kr << std::endl;
+        tri->model->sampleDiffuse(tri->nthface, bc, diffuse);
+        L_dir = diffuse*kr;
+
+
+        
+        // std::cout << "L_dir: " << L_dir << std::endl;
+
+        // Contribution from other reflections.
+        // Test Russion Roulette with probability P_RR
+        float ksi = PATH_TRACING_UNIFORM_DIST(PATH_TRACING_RNG);
+        if (ksi <= PATH_TRACING_P_RR) {
+
+            // std::cout << "Russion Roulette; ";
+
+            // Randomly choose ONE direction wi~pdf(w)
+            Vec3f randp = tri->model->randomSampleInP();
+            Vec3f dir = (randp + N_p).normalize();
+
+            Ray next_ray = Ray(p, dir);
+
+            if (RayInteract(bvh, next_ray, index, bc, next_p)) {
+
+                // std::cout << "Interact; ";
+
+                if (bvh->tris[index]->model != light) {
+
+                    // std::cout << "Not light;" << std::endl;
+                    // std::cout << "next_dir: " << dir;
+                    // std::cout << "next_p: " << next_p;
+
+                    Vec4f c = RayTracing(bvh, next_ray, light);
+                    L_indir = c * f_r * (N_p*w0) * 2 * M_PI / PATH_TRACING_P_RR;
+
+                    // std::cout << "L_indir: " << L_indir;
+                }
+            }
+        }
+
+        // Contribution from itself.
+        if (tri->model->emit() > 0) {
+            kr = (tri->model->emit()) * f_r / (ray.pos-p).norm() / light->pdf();
+            E = diffuse*kr;
+        }
+
+        
+        // std::cout << "E: " << E;
+        // std::cout << "L_dir: " << L_dir;
+        // std::cout << "L_indir: " << L_indir;
+        // std::cout << std::endl;
+
+        Vec4f color = E + L_dir + L_indir;
+        for (int i = 0; i < 4; ++i) {
+            color[i] = std::min(1.0f, color[i]);
+        }
+        return color;
+    } else {
+        return BACKGROUND_COLOR;
+    }
+
 }
 }
 
