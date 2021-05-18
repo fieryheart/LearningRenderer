@@ -4,6 +4,7 @@
 #define MY_EPS 1e-5
 
 namespace QGL {
+
 std::ostream& operator<<(std::ostream& s, AxisAlignedBoundBox& aabb) {
     s << "(" << aabb.minn[0] << ", " << aabb.minn[1] << ", " << aabb.minn[2] << ")";
     s << " (" << aabb.maxn[0] << ", " << aabb.maxn[1] << ", " << aabb.maxn[2] << ")\n";
@@ -168,12 +169,13 @@ int BVHNode::BVHSort(std::vector<BVHTriangle*> &objects, int left, int right, in
 BVHNode::BVHNode(std::vector<BVHTriangle*> &objects, int left, int right) {
     
     // Log
-    std::cout << "BVHNode: " << left << " " << right << std::endl;
+    // std::cout << "BVHNode: " << left << " " << right << std::endl;
     
     
     if (left > right) {
         aabb = AxisAlignedBoundBox(0.0f,0.0f,0.0f,0.0f,0.0f,0.0f);
         lChild = rChild = NULL;
+        oleft = oright = -1;
     } else if (right-left+1 <= 5) {
         getaabb(objects, left, right);
         oleft = left, oright = right;
@@ -198,6 +200,7 @@ void BVHNode::interact(Ray &ray, std::vector<int> &indices) {
         if (lChild) lChild->interact(ray, indices);
         if (rChild) rChild->interact(ray, indices);
         if (oleft >= 0) {
+            // std::cout << oleft << " " << oright << std::endl;
             for (int i = oleft; i <= oright; ++i) {
                 indices.push_back(i);
             }
@@ -221,6 +224,9 @@ BVHBuilder::BVHBuilder(std::vector<Model*> models) {
         for (int j = 0; j < models[i]->nfaces(); ++j) {
             BVHTriangle *tri = new BVHTriangle(models[i], j);
             tris.push_back(tri);
+        }
+        if (models[i]->type() == MDT_Light) {
+            light = dynamic_cast<LightModel*>(models[i]);
         }
     }
 

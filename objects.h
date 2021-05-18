@@ -61,6 +61,19 @@ enum MapType {
     MT_Specular
 };
 
+// 模型类型
+enum ModelType {
+	MDT_Buildin = 0,
+    MDT_Strange,
+    MDT_Light
+};
+
+enum MatrialType {
+    MTT_Diffuse = 0,
+    MTT_Mirror,
+    MTT_Glossy
+};
+
 // Sample2D结构
 struct Sample2D {
     int width;
@@ -150,17 +163,6 @@ struct PointLight : Light {
     PointLight(Vec3f pos, float illumination) : pos(pos), illumination(illumination) {}
 };
 
-// 面：对象坐标、法向量、纹理坐标
-struct Face {
-    Vec3i v;
-    Vec3i vn;
-    Vec3i vt;
-    Face(){}
-    Face(Vec3i v) : v(v){}
-    Face(Vec3i v, Vec3i vn) : v(v), vn(vn){}
-    Face(Vec3i v, Vec3i vn, Vec3i vt) : v(v), vn(vn), vt(vt){}
-};
-
 struct Ray {
     Vec3f pos;
     Vec3f dir;
@@ -223,34 +225,5 @@ struct Object {
 //         }
 //     }
 // }
-
-// 四边形： 点、法向量
-struct Plane : Object {
-    Vec3f points[4];
-    Vec3f normal;
-    Vec4f colors[4];
-    float emission;
-    Plane() {}
-    Plane(Vec3f *pts, Vec4f &color_) {
-        points[0] = pts[0];
-        points[1] = pts[1];
-        points[2] = pts[2];
-        points[3] = pts[3];
-
-        Vec3f ab = points[1] - points[0];
-        Vec3f ac = points[2] - points[0];
-        normal = (ac^ab).normalize();
-
-        colors[0] = color_;
-        colors[1] = color_;
-        colors[2] = color_;
-        colors[3] = color_;
-    }
-    ~Plane() {}
-    bool interact(Ray &ray, float &t) {
-        // todo
-        return true;
-    }
-};
 }
 #endif // __OBJECTS_H__

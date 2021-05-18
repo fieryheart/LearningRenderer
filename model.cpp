@@ -8,8 +8,13 @@
 #include "stb_image.h"
 
 namespace QGL {
+
+ModelType StrangeModel::type() { return MDT_Strange; }
+ModelType BuildinModel::type() { return MDT_Buildin; }
+ModelType LightModel::type() { return MDT_Light; }
+
 // 2021-05-08: 模型加载
-Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
+StrangeModel::StrangeModel(const char *filename) : verts(), normals(), textures(), faces(), mtt(MTT_Diffuse) {
     std::cout << "Init Model " << filename << "." << std::endl;
     std::ifstream in;
     in.open (filename, std::ifstream::in);
@@ -57,72 +62,29 @@ Model::Model(const char *filename) : verts(), normals(), textures(), faces() {
     std::cerr << "#vn " << normals.size() << std::endl;
     std::cerr << "#vt " << textures.size() << std::endl;
     std::cerr << "#f " << faces.size() << std::endl;
-    // load_texture(filename, "_diffuse.tga", diffusemap_);
-    // load_texture(filename, "_nm.tga",      normalmap_);
-    // load_texture(filename, "_spec.tga",    specularmap_);
-}
-
-Model::Model(Plane plane) {
-    verts.push_back(plane.points[0]);
-    verts.push_back(plane.points[1]);
-    verts.push_back(plane.points[2]);
-    verts.push_back(plane.points[3]);
-    normals.push_back(plane.normal);
-    normals.push_back(plane.normal);
-    normals.push_back(plane.normal);
-    normals.push_back(plane.normal);
-    faces.push_back(Face(Vec3i(0, 1, 2)));
-    faces.push_back(Face(Vec3i(1, 2, 3)));
-    colors.push_back(plane.colors[0]);
-    colors.push_back(plane.colors[0]);
-    colors.push_back(plane.colors[0]);
-    colors.push_back(plane.colors[0]);
-    emissions.push_back(plane.emission);
-    emissions.push_back(plane.emission);
-    emissions.push_back(plane.emission);
-    emissions.push_back(plane.emission);
-
-    float w = (verts[1]-verts[0]).norm();
-    float h = (verts[2]-verts[0]).norm();
-    area = w*h;
 
     rng.seed(std::random_device()());
     distribution = std::uniform_real_distribution<float>(-1, 1);
-
-    diffusemap_ = NULL;
 }
 
-Model::Model(std::vector<Vec3f> &_verts, std::vector<Face> &_faces) {
-    verts = _verts;
-    faces = _faces;
-}
-
-Model::~Model() {
+StrangeModel::~StrangeModel() {
     if (diffusemap_) delete diffusemap_;
 }
 
-int Model::nverts() {
-    return (int)verts.size();
-}
+int StrangeModel::nverts() {return (int)verts.size();}
+int StrangeModel::nfaces() {return (int)faces.size();}
+Vec3f StrangeModel::vert(int nthface, int nthvert) {return verts[faces[nthface].v[nthvert]];}
 
-int Model::nfaces() {
-    return (int)faces.size();
-}
-
-Vec3f Model::vert(int nthface, int nthvert) {
-    return verts[faces[nthface].v[nthvert]];
-}
-
-Vec3f Model::norm(int nthface, int nthvert) {
+Vec3f StrangeModel::norm(int nthface, int nthvert) {
     return normals[faces[nthface].vn[nthvert]];
 }
 
-Vec2f Model::tex(int nthface, int nthvert) {
+Vec2f StrangeModel::tex(int nthface, int nthvert) {
     return textures[faces[nthface].vt[nthvert]];
 }
 
 // 将节点归一化
-void Model::vertsNormalize() {
+void StrangeModel::preprocess() {
     if (verts.empty()) {
         std::cout << "verts of model is empty." << std::endl;
         return;
@@ -170,7 +132,7 @@ void Model::vertsNormalize() {
 }
 
 // 加载贴图
-void Model::loadMap(const char *filename, MapType mt) {
+void StrangeModel::loadMap(const char *filename, MapType mt) {
     std::cout << "loadMap: ";
     // 加载图片
     int x,y,n;
@@ -185,32 +147,135 @@ void Model::loadMap(const char *filename, MapType mt) {
     }
 }
 
-void Model::sampleDiffuse(Vec2f uv, Vec4f &color) {
+void StrangeModel::sampleDiffuse(Vec2f uv, Vec4f &color) {
     if (diffusemap_) {
         diffusemap_->sample(uv, color);
     } else {
         color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
     }
 }
-void Model::sampleDiffuse(int nthface, Vec3f bc, Vec4f &color) {
-    if (!diffusemap_) {
-        color = Vec4f(0.0f, 0.0f, 0.0f, 0.0f);
-        for (int i = 0; i < 3; ++i) {
-            color = color + colors[faces[nthface].v[i]]*bc[i];
-        }
+
+Vec3f StrangeModel::randomRay(int nthface) {
+    Vec3i pi = faces[nthface].v;
+    float r0 = distribution(rng);
+    float r1 = distribution(rng);
+    Vec3f x = (verts[pi[1]]-verts[pi[0]]).normalize();
+    Vec3f y = (verts[pi[2]]-verts[pi[0]]).normalize();
+    return x*r0 + y*r1;
+}
+
+//
+//
+//
+BuildinModel::BuildinModel(std::vector<Vec3f> &verts_, 
+				 std::vector<Vec3f> &normals_,
+				 std::vector<Vec4f> &colors_,
+				 std::vector<Vec3i> &faces_,
+				 std::vector<MatrialType> &mt_types_) : 
+    verts(verts_),
+    normals(normals_),
+    colors(colors_),
+    faces(faces_),
+    mt_types(mt_types_) {
+
+    // 设定随机
+    rng.seed(std::random_device()());
+    distribution = std::uniform_real_distribution<float>(-1, 1);
+}
+
+float BuildinModel::brdf(int nthface, Vec3f p, Vec3f wi, Vec3f wo) {
+    if (mt_types[nthface] == MT_Diffuse) {
+        return 1.0f / (2*M_PI);
     } else {
-        color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+        return 0.0f;
     }
 }
 
-Vec3f Model::randomSample() {
-    float r0 = std::abs(distribution(rng));
-    float r1 = std::abs(distribution(rng));
+int BuildinModel::nverts() {return verts.size();}
+int BuildinModel::nfaces() {return faces.size();}
+Vec3f BuildinModel::vert(int nthface, int nthvert) {return verts[faces[nthface][nthvert]];}
+Vec3f BuildinModel::norm(int nthface, int nthvert) {
+    return normals[nthface];
+}
+
+void BuildinModel::sampleDiffuse(int nthface, Vec4f &color) {
+    color = colors[nthface];
+}
+
+Vec3f BuildinModel::randomRay(int nthface) {
+    Vec3i pi = faces[nthface];
+    // float r0 = distribution(rng);
+    // float r1 = distribution(rng);
+    // Vec3f x = verts[pi[1]]-verts[pi[0]]).normalize();
+    // Vec3f y = (verts[pi[2]]-verts[pi[0]]).normalize();
+    // return x*r0 + y*r1;
+    float r0 = distribution(rng);
+    float r1 = distribution(rng);
+    Vec3f x = (verts[pi[1]]-verts[pi[0]]).normalize();
+    Vec3f y = (x^normals[nthface]).normalize();
+    return (x*r0+y*r1).normalize();
+}
+
+//
+//
+//
+LightModel::LightModel( std::vector<Vec3f> &verts_, 
+			   	        std::vector<Vec3f> &normals_,
+			            std::vector<Vec3i> &faces_,
+				        Vec4f &color_,
+				        float intensity_) :
+    verts(verts_),
+    normals(normals_),
+    faces(faces_),
+    color(color_),
+    intensity(intensity_)
+{
+    float w = (verts[1]-verts[0]).norm();
+    float h = (verts[2]-verts[0]).norm();
+    area = w*h;
+
+    // 设定随机
+    rng.seed(std::random_device()());
+    distribution = std::uniform_real_distribution<float>(0, 1);
+}
+
+int LightModel::nverts() {return verts.size();}
+int LightModel::nfaces() {return faces.size();}
+Vec3f LightModel::vert(int nthface, int nthvert) {return verts[faces[nthface][nthvert]];}
+Vec3f LightModel::norm(int nthface, int nthvert) {
+    return normals[nthface];
+}
+
+Vec3f LightModel::randomSample() {
+    float r0 = distribution(rng);
+    float r1 = distribution(rng);
     Vec3f randP = verts[0] + (verts[1]-verts[0])*r0;
     randP = randP + (verts[3]-verts[1])*r1;
     return randP;
 }
 
+Vec3f LightModel::randomRay(int nthface) {
+    Vec3i pi = faces[nthface];
+    float r0 = (distribution(rng)-0.5)*2;
+    float r1 = (distribution(rng)-0.5)*2;
+    Vec3f x = (verts[pi[1]]-verts[pi[0]]).normalize();
+    Vec3f y = (verts[pi[2]]-verts[pi[0]]).normalize();
+    return x*r0 + y*r1;
+}
+
+Vec4f LightModel::getColor() {
+    return color;
+}
+
+float LightModel::emit() {
+    return intensity;
+}
+
+float LightModel::pdf() {
+    return 1.0f/area;
+}
+
+/*
 Vec3f Model::randomSampleInP() {
     float r0 = distribution(rng);
     float r1 = distribution(rng);
@@ -218,14 +283,7 @@ Vec3f Model::randomSampleInP() {
     Vec3f y = (x^normals[0]).normalize();
     return (x*r0+y*r1).normalize();
 }
-
-float Model::emit() {
-    return emissions[0];
-}
-
-float Model::pdf() {
-    return 1.0f/area;
-}
+*/
 }
 
 

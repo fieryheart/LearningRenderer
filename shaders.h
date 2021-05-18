@@ -34,7 +34,7 @@ public:
     virtual void vertex(const InVectex &in, OutVectex &out) = 0;
     virtual bool fragment(const InFragment &in, OutFragment &out) = 0;
 };
-
+/*
 class TestShader : public Shader {
 public:
     Matrix uniform_mat_transform;
@@ -298,6 +298,7 @@ public:
         return false;
     }
 };
+*/
 }
 
 

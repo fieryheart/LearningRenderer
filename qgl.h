@@ -25,7 +25,7 @@ struct RenderPTNode {
     int height;
     float fov;
     int bound;
-    int light;
+    // int light;
     RenderPTNode(){}
 };
 
@@ -65,7 +65,7 @@ void DrawTriangle(Vec4f *points, RenderNode &rn);
 
 // 路径追踪
 void RenderingByPathTracing(RenderPTNode &in);
-Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, Model* light);
+Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p);
 }
 
 

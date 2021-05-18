@@ -65,6 +65,7 @@ struct BVHNode {
 struct BVHBuilder {
     BVHNode *root;
     std::vector<BVHTriangle*> tris;
+    LightModel *light;
     BVHBuilder(){}
     BVHBuilder(std::vector<Model*> models);
     ~BVHBuilder();
