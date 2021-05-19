@@ -453,6 +453,10 @@ void Example07() {
     // plane5.emission = 150.0f;
     // QGL::Model *planeModel5 = new QGL::Model(plane5);
 
+    // Marry
+    QGL::StrangeModel *marry = new QGL::StrangeModel("../obj/Marry.obj");
+    marry->preprocess();
+
     // Planes
     std::vector<Vec3f> planes_verts{Vec3f(-60, 60, -50), Vec3f(-60, -60, -50),
                                     Vec3f(-50, -60, -100), Vec3f(-50, 60, -100),
@@ -494,6 +498,7 @@ void Example07() {
                                             light_color, intensity);
     
     std::vector<QGL::Model*> models;
+    // models.push_back(marry);
     models.push_back(box);
     models.push_back(light);
 

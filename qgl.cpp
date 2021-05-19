@@ -427,6 +427,8 @@ void RenderingByPathTracing(RenderPTNode &in) {
 
     BVHBuilder *bvh = new BVHBuilder(in.models);
 
+    std::cout << bvh->tris.size() << std::endl;
+
     Frame *frame = in.frame;
     Vec3f pos = in.camera;
     int width = in.width, height = in.height;
@@ -507,8 +509,6 @@ void RenderingByPathTracing(RenderPTNode &in) {
             // std::cout << dir;
             color[3] = 1.0f;
             frame->set(i, j, color);
-
-            printf("%d %d\n", i, j);
         }
     }
 }
