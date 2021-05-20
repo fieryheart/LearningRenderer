@@ -48,16 +48,21 @@ public:
 	StrangeModel(const char *filename);
 	~StrangeModel();
 	virtual ModelType type();
+	float brdf(int nthface, Vec3f p, Vec3f wi, Vec3f wo);
 	virtual int nverts();
 	virtual int nfaces();
 	Face face(int nthface);
 	virtual Vec3f vert(int nthface, int nthvert);
 	virtual Vec3f norm(int nthface, int nthvert);
+	Vec3f norm(int nthface, Vec3f bc);
 	Vec2f tex(int nthface, int nthvert);
 	void preprocess();	// 顶点数据映射至[-1, 1]
 	void loadMap(const char *filename, MapType mt);
 	void sampleDiffuse(Vec2f uv, Vec4f &color);
+	void sampleDiffuse(int nthface, Vec3f bc, Vec4f &color);
 	virtual Vec3f randomRay(int nthface);
+	void scale(float width, float height, float depth);
+	void translate(float x, float y, float z);
 };
 
 // // 四边形： 点、法向量

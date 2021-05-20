@@ -22,8 +22,8 @@ Matrix MAT_NORM_IT = Matrix::identity(4);
 Vec4f BACKGROUND_COLOR = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
 
 
-int PATH_TRACING_N = 10;
-float PATH_TRACING_P_RR = 0.5;
+int PATH_TRACING_N = 100;
+float PATH_TRACING_P_RR = 0.7;
 std::mt19937 PATH_TRACING_RNG;
 std::uniform_real_distribution<float> PATH_TRACING_UNIFORM_DIST = std::uniform_real_distribution<float>(0, 1);
 
@@ -427,7 +427,7 @@ void RenderingByPathTracing(RenderPTNode &in) {
 
     BVHBuilder *bvh = new BVHBuilder(in.models);
 
-    std::cout << bvh->tris.size() << std::endl;
+    // std::cout << bvh->tris.size() << std::endl;
 
     Frame *frame = in.frame;
     Vec3f pos = in.camera;
@@ -507,6 +507,9 @@ void RenderingByPathTracing(RenderPTNode &in) {
                 color = color + one_ray_color / (PATH_TRACING_N*1.0f);
             }
             // std::cout << dir;
+            // color[0] = std::min(1.0f, color[0]);
+            // color[1] = std::min(1.0f, color[1]);
+            // color[2] = std::min(1.0f, color[2]);
             color[3] = 1.0f;
             frame->set(i, j, color);
         }
@@ -569,7 +572,37 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
             L_dir = diffColor*k_r;
         }
     } else if (tri->model->type() == MDT_Strange) {
+        // L_dir = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
 
+        StrangeModel *sm = dynamic_cast<StrangeModel*>(tri->model);
+        N_p = sm->norm(tri->nthface, bc);
+        p = p + N_p*0.5f;
+        lp = bvh->light->randomSample(); // uniformly sample the light.
+        N_lp = bvh->light->norm(0, 0);
+        w0 = (ray.pos-p).normalize();
+        w1 = (p-lp).normalize();
+
+        // occlusion
+        Ray trashRay = Ray(p, -w1);
+        int tmpIdx = -1;
+        Vec3f trashBC, tmpP;
+        RayInteract(bvh, trashRay, tmpIdx, trashBC, tmpP);
+        // 只有一个光源，暂时先这么写～
+        if (tmpIdx != -1 && bvh->tris[tmpIdx]->model->type() == MDT_Light) {
+            dis = (p-lp).norm2();
+            f_r = sm->brdf(tri->nthface, p, w0, -w1);
+            k_r = L_i * f_r * (N_p*w0) * (N_lp*w1) / dis / bvh->light->pdf();
+            sm->sampleDiffuse(tri->nthface, bc, diffColor);
+            
+            // std::cout << L_i << " " << f_r << " " << N_p*w0 << " " << N_lp*w1 << " " << dis << " " << bvh->light->pdf() << std::endl;
+            // std::cout << "N_p: " << N_p;
+            // std::cout << "w0: " << w0;
+            // std::cout << "k_r: " << k_r << " ";
+            // std::cout << diffColor;
+            L_dir = diffColor*k_r;
+        }        
+
+        return L_e + L_dir;
     }
     // return L_e + L_dir;
 

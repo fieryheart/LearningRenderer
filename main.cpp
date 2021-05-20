@@ -401,7 +401,7 @@ void Example07() {
     rn.camera = camera;
     rn.width = width;
     rn.height = height;
-    rn.fov = M_PI/2;
+    rn.fov = M_PI*0.7;
     rn.bound = 1;
 
     // Plane Model
@@ -456,29 +456,39 @@ void Example07() {
     // Marry
     QGL::StrangeModel *marry = new QGL::StrangeModel("../obj/Marry.obj");
     marry->preprocess();
+    marry->scale(80, 80, 100);
+    marry->translate(0, -20, -25);
+    marry->loadMap("../obj/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
 
     // Planes
-    std::vector<Vec3f> planes_verts{Vec3f(-60, 60, -50), Vec3f(-60, -60, -50),
-                                    Vec3f(-50, -60, -100), Vec3f(-50, 60, -100),
-                                    Vec3f(50, 60, -100), Vec3f(50, -60, -100),
-                                    Vec3f(60, -60, -50), Vec3f(60, 60, -50)};
+    float l = -50, r = 50;
+    float b = -50, t = 50;
+    float f = -49, n = 1;
+    std::vector<Vec3f> planes_verts{Vec3f(l, t, n), Vec3f(l, b, n),
+                                    Vec3f(l, b, f), Vec3f(l, t, f),
+                                    Vec3f(r, t, f), Vec3f(r, b, f),
+                                    Vec3f(r, b, n), Vec3f(r, t, n)};
     std::vector<Vec3f> normals_verts{Vec3f(1, 0, 0), Vec3f(1, 0, 0),
                                      Vec3f(0, -1, 0), Vec3f(0, -1, 0),
                                      Vec3f(-1, 0, 0), Vec3f(-1, 0, 0),
                                      Vec3f(0, 1, 0), Vec3f(0, 1, 0),
-                                     Vec3f(0, 0, 1), Vec3f(0, 0, 1)};
+                                     Vec3f(0, 0, 1), Vec3f(0, 0, 1),
+                                     Vec3f(0, 0, -1), Vec3f(0, 0, -1)};
     std::vector<Vec4f> colors{Vec4f(1.0f, 0.0f, 0.0f, 1.0f),Vec4f(1.0f, 0.0f, 0.0f, 1.0f),
                               Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f),
                               Vec4f(0.0f, 1.0f, 0.0f, 1.0f),Vec4f(0.0f, 1.0f, 0.0f, 1.0f),
+                              Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f),
                               Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f),
                               Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f)};
     std::vector<Vec3i> faces{Vec3f(0, 1, 2), Vec3f(0, 2, 3),    // 左
                              Vec3f(0, 3, 4), Vec3f(0, 4, 7),    // 上
                              Vec3f(4, 5, 6), Vec3f(4, 6, 7),    // 右
                              Vec3f(1, 2, 5), Vec3f(1, 5, 6),    // 下
-                             Vec3f(2, 3, 5), Vec3f(3, 4, 5)     // 中
+                             Vec3f(2, 3, 5), Vec3f(3, 4, 5),    // 后
+                             Vec3f(0, 1, 6), Vec3f(0, 6, 7)     // 前
                             };
     std::vector<QGL::MatrialType> mt_types{QGL::MTT_Diffuse,QGL::MTT_Diffuse,
+                                           QGL::MTT_Diffuse,QGL::MTT_Diffuse,
                                            QGL::MTT_Diffuse,QGL::MTT_Diffuse,
                                            QGL::MTT_Diffuse,QGL::MTT_Diffuse,
                                            QGL::MTT_Diffuse,QGL::MTT_Diffuse,
@@ -488,17 +498,17 @@ void Example07() {
 
 
     // light
-    std::vector<Vec3f> light_verts{Vec3f(-10, 59.9, -80), Vec3f(-10, 59.9, -70),
-                                   Vec3f(10, 59.9, -80),  Vec3f(10, 59.9, -70)};
+    std::vector<Vec3f> light_verts{Vec3f(-10, t-0.1, -30), Vec3f(-10, t-0.1, -20),
+                                   Vec3f(10, t-0.1, -30),  Vec3f(10, t-0.1, -20)};
     std::vector<Vec3f> light_normals{Vec3f(0, -1, 0), Vec3f(0, -1, 0)};
     std::vector<Vec3i> light_faces{Vec3f(0, 1, 2), Vec3f(1, 2, 3)};
     Vec4f light_color = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
-    float intensity = 150.f;
+    float intensity = 150.0f;
     QGL::Model *light = new QGL::LightModel(light_verts, light_normals, light_faces, 
                                             light_color, intensity);
     
     std::vector<QGL::Model*> models;
-    // models.push_back(marry);
+    models.push_back(marry);
     models.push_back(box);
     models.push_back(light);
 

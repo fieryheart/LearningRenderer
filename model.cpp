@@ -71,12 +71,26 @@ StrangeModel::~StrangeModel() {
     if (diffusemap_) delete diffusemap_;
 }
 
+float StrangeModel::brdf(int nthface, Vec3f p, Vec3f wi, Vec3f wo) {
+    if (mtt == MT_Diffuse) {
+        return 1.0f / (2*M_PI);
+    } else {
+        return 0.0f;
+    }
+}
+
 int StrangeModel::nverts() {return (int)verts.size();}
 int StrangeModel::nfaces() {return (int)faces.size();}
 Vec3f StrangeModel::vert(int nthface, int nthvert) {return verts[faces[nthface].v[nthvert]];}
 
 Vec3f StrangeModel::norm(int nthface, int nthvert) {
     return normals[faces[nthface].vn[nthvert]];
+}
+
+Vec3f StrangeModel::norm(int nthface, Vec3f bc) {
+    Vec3f vn[3];
+    for (int i = 0; i < 3; ++i) vn[i] = norm(nthface, i);
+    return vn[0]*bc[0]+vn[1]*bc[1]+vn[2]*bc[2];
 }
 
 Vec2f StrangeModel::tex(int nthface, int nthvert) {
@@ -155,6 +169,17 @@ void StrangeModel::sampleDiffuse(Vec2f uv, Vec4f &color) {
     }
 }
 
+void StrangeModel::sampleDiffuse(int nthface, Vec3f bc, Vec4f &color) {
+    if (diffusemap_) {
+        Vec2f uvs[3], uv;
+        for (int i = 0; i < 3; ++i) uvs[i] = tex(nthface, i);
+        uv = uvs[0]*bc[0]+uvs[1]*bc[1]+uvs[2]*bc[2];
+        sampleDiffuse(uv, color);
+    } else {
+        color = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+    }
+}
+
 Vec3f StrangeModel::randomRay(int nthface) {
     Vec3i pi = faces[nthface].v;
     float r0 = distribution(rng);
@@ -163,6 +188,42 @@ Vec3f StrangeModel::randomRay(int nthface) {
     Vec3f y = (verts[pi[2]]-verts[pi[0]]).normalize();
     return x*r0 + y*r1;
 }
+
+void StrangeModel::scale(float width, float height, float depth) {
+    Matrix scaleM = Matrix::identity(4);
+    scaleM[0][0] = width/2;
+    scaleM[1][1] = height/2;
+    scaleM[2][2] = depth/2;
+
+    Matrix scaleM_i = scaleM.inverse();
+
+    Vec4f v, vn;
+    for (int i = 0; i < verts.size(); ++i) {
+        v = Vec4f(verts[i], 1.0f);
+        v = scaleM*v;
+        verts[i] = v.v3f();
+    }
+    for (int i = 0; i < normals.size(); ++i) {
+        vn = Vec4f(normals[i], 1.0f);
+        vn = scaleM_i*vn;
+        normals[i] = (vn.v3f()).normalize();
+    }
+}
+
+void StrangeModel::translate(float x, float y, float z) {
+    Matrix trans = Matrix::identity(4);
+    trans[0][3] = x;
+    trans[1][3] = y;
+    trans[2][3] = z;
+
+    Vec4f v;
+    for (int i = 0; i < verts.size(); ++i) {
+        v = Vec4f(verts[i], 1.0f);
+        v = trans*v;
+        verts[i] = v.v3f();
+    }
+}
+
 
 //
 //
