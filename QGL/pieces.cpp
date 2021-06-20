@@ -1,6 +1,7 @@
-#include "objects.h"
+#include "pieces.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "../Utils/stb_image_write.h"
+
 
 namespace QGL {
 

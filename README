@@ -1,0 +1,19 @@
+
+# 目录结构
+
+- QGL
+  - pieces.h
+    - Frame: 帧数据
+    - Zbuffer: Zbuffer结构
+    - Sample2D: 纹理采样结构
+    - Timer: 计时器结构
+    - Log: debug输出
+  - types.h
+    - ComType | MapType | ModelType | MatrialType
+
+- Geometry
+  - geometry.h
+    - Vec2<> | Vec3<> | Vec4<> | Matrix<>
+
+- Utils
+  - stb_image : 读取存储图片(https://github.com/nothings/stb)
