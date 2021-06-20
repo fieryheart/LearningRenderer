@@ -2,6 +2,7 @@
 #define __PIECES_H__
 
 #include <chrono>
+#include <iostream>
 #include "../Geometry/geometry.h"
 
 using namespace std::chrono;

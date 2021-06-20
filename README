@@ -11,6 +11,12 @@
   - types.h
     - ComType | MapType | ModelType | MatrialType
 
+- Rasterizer
+  - rasterizer.h
+
+- PathTracing
+  - PathTracing.h
+
 - Geometry
   - geometry.h
     - Vec2<> | Vec3<> | Vec4<> | Matrix<>

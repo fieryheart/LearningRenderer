@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cmath>
+#include <iostream>
 
 template <class t> struct Vec2 {
     t x, y;
