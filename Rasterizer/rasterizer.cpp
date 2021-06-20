@@ -59,6 +59,11 @@ void SetOrthogonalProjectMat(int width, int height, int depth) {
     MAT_ORTHO_PROJECT = scale*traslate*MAT_ORTHO_PROJECT;
 }
 
+void SetPerspectiveProjectMat(Vec3f camera, Vec3f origin) {
+    MAT_PERS_PROJECT = Matrix::identity(4);
+    MAT_PERS_PROJECT[3][2] = -1.f/(camera-origin).norm();
+}
+
 // 计算屏幕坐标
 // x: [-1,1] -> [x,x+w]
 // y: [-1,1] -> [y,y+h]
@@ -76,6 +81,103 @@ void SetScreenMat(int x, int y, int w, int h, int depth) {
 
 void Init() {
     MAT_TRANS = MAT_SCREEN*MAT_ORTHO_PROJECT*MAT_PERS_PROJECT*MAT_VIEW*MAT_MODEL;
+}
+
+Vec3f barycentric(Vec4f *pts, Vec2f P) {
+    Vec3f u = (Vec3f(pts[2].x-pts[0].x, pts[1].x-pts[0].x, pts[0].x-P.x))^(Vec3f(pts[2].y-pts[0].y, pts[1].y-pts[0].y, pts[0].y-P.y));
+    if (std::abs(u.z)<1e-2) return Vec3f(-1,1,1);
+    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+}
+
+void Rasterize(RasterNode &rn) {
+    if (rn.comType == CT_Single) SingleRasterize(rn);
+    else if (rn.comType == CT_Multi) MultiRasterize(rn);
+    else return;
+}
+
+void DrawTriangle(Vec4f *points, RasterNode &rn) {
+    Model *model = rn.model;
+    Shader *shader = rn.shader;
+    Frame *frame = rn.frame;
+    Zbuffer *zbuffer = rn.zbuffer;
+    int width = frame->width, height = frame->height;
+
+    Vec2f bboxmin(width-1, height-1);
+    Vec2f bboxmax(0, 0);
+    Vec2f clamp(width-1, height-1); 
+    for (int i=0; i<3; i++) { 
+        bboxmin.x = std::min(bboxmin.x, points[i].x);
+        bboxmin.y = std::min(bboxmin.y, points[i].y);
+        bboxmax.x = std::max(bboxmax.x, points[i].x);
+        bboxmax.y = std::max(bboxmax.y, points[i].y);
+    }
+    bboxmin.x = std::min(0.f, bboxmin.x);
+    bboxmin.y = std::min(0.f, bboxmin.y);
+    bboxmax.x = std::max(clamp.x, bboxmax.x);
+    bboxmax.y = std::max(clamp.y, bboxmax.y);
+
+    Vec2i P;
+    Vec3f bc;
+    float z, w, depth, weight;
+    for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
+        for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) {
+            bc = barycentric(points, Vec2f(P.x, P.y));
+            z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
+            w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
+            depth = std::max(0.f, std::min(1.0f, z/w));
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > depth) continue;
+            InFrag in;
+            OutFrag out;
+            in.bar = bc;
+            in.depth = z;
+            in.model = model;
+            if (!shader->fragment(in, out)) {
+                zbuffer->set(P.x, P.y, z);
+                frame->set(P.x, P.y, out.color);
+            }
+        }
+    }
+}
+
+void SingleRasterize(RasterNode &rn) {
+    Model *model = rn.model;
+    Shader *shader = rn.shader;
+    Log *log = rn.log;
+    // Zbuffer *zbuffer = rn.zbuffer;
+	Frame *frame = rn.frame;
+    Vec4f screen_coords[3];
+    int nfaces = model->nfaces();
+    for (int i = 0; i < nfaces; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            Vec3f v = model->vert(i, j);
+            InVert inV;
+            OutVert outV;
+
+            inV.v = v;
+            inV.nthface = i;
+            inV.nthvert = j;
+            inV.model = model;
+            
+            shader->vertex(inV, outV);
+            screen_coords[j] = outV.sCoord;
+            // std::cout << "Rendering-" << i << "-" << j << "-" << screen_coords[j];
+        }
+
+        DrawTriangle(screen_coords, rn);
+
+        if (log && log->flag) log->show(i, nfaces);
+    }
+    if (log && log->flag) log->show(nfaces, nfaces);
+}
+
+void MultiRasterize(RasterNode &rn) {
+    std::cout << "Multithreading rasterize is not supported~" << std::endl;
+
+    Model *model = rn.model;
+    int nfaces = model->nfaces();
+
+    #pragma omp parallel for num_threads(NUM_THREADS)
+    for (int i = 0; i < nfaces; ++i) {}
 }
 
 }

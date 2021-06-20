@@ -9,6 +9,12 @@ using namespace std::chrono;
 
 namespace QGL {
 
+//>>>=========================================
+//
+//              自定义的数据结构
+//
+//>>>=========================================
+
 // 帧结构
 struct Frame {
     int width;
@@ -87,6 +93,13 @@ struct Sample2D {
     }
 };
 
+
+//>>>=========================================
+//
+//                辅助工具类
+//
+//>>>=========================================
+
 // 计时器
 class Timer {
 public:
@@ -96,6 +109,7 @@ public:
     double second() {return microsec()*0.000001;}
     double millisec() {return microsec()*0.001;}
     long long microsec() {return duration_cast<microseconds>(high_resolution_clock::now() - _start).count();}
+    void show() {std::cout << millisec() << "ms" << std::endl;}
 private:
     time_point<high_resolution_clock>_start;
 };

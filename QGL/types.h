@@ -6,7 +6,7 @@ namespace QGL {
 // 计算方式
 enum ComType {
     CT_Single = 0,
-    CT_Omp
+    CT_Multi
 };
 
 // 贴图类型
