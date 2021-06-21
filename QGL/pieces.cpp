@@ -25,4 +25,30 @@ void Frame::flip() {
     }
 }
 
+Frame Frame::copy() {
+    Frame ret = Frame(width, height, 4);
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            ret.set(i, j, buffer[i+width*j]);
+        }
+    }
+    return ret;
+}
+
+void Frame::filter(std::vector<float> &kernel, int kw, int kh) {
+    Frame frame_copy = copy();
+
+    for (int i = kw/2; i < width-kw/2; ++i) {
+        for (int j = kh/2; j < height-kh/2; ++j) {
+            Vec4f c = Vec4f(0.0f), c1;
+            for (int k = 0; k < kernel.size(); ++k) {
+                int ii = k % kw - 1 + i;
+                int jj = k / kh - 1 + j;
+                c = c + (frame_copy.get(ii, jj)) * kernel[k];
+            }
+            set(i, j, c);
+        }
+    }    
+}
+
 }

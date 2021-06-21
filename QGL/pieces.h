@@ -34,6 +34,8 @@ struct Frame {
     }
     void draw(const char *filename);
     void flip();
+    Frame copy();
+    void filter(std::vector<float> &kernel, int kw, int k);
 };
 
 // Zbuffer结构
@@ -92,6 +94,8 @@ struct Sample2D {
         }
     }
 };
+
+
 
 
 //>>>=========================================

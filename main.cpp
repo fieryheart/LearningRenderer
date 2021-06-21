@@ -55,6 +55,10 @@ void Lab_0() {
     Rasterize(rn);
     timer.show();
 
+    // filter
+    std::vector<float> kernel(9, 1/9.f);
+    frame.filter(kernel, 3, 3);
+
     std::string img = "../examples/TexShader/out_800*800.png";
     frame.flip();
     frame.draw(img.c_str());
