@@ -13,8 +13,10 @@ public:
     Vec2f varying_uv[3];
     virtual void vertex(const InVert &in, OutVert &out) {
         Vec4f vertex = Vec4f(in.v, 1.0f);
+        float depth = vertex[2];
         vertex = uniform_mat_transform*vertex;
         vertex = vertex / vertex.w;
+        vertex[2] = depth;
         out.sCoord = vertex;
 
         // tex

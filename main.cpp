@@ -8,18 +8,18 @@ using namespace QGL;
 void Lab_0() {
     const int width = 800;
     const int height = 800;
-    const int depth = 1;
+    const int depth = 200;
     const float near = 1.f;
-    const float far = 150.f;
+    const float far = 100.f;
+    const float fov = 45.f;
+    const float ratio = 1.f;
 
-    const Vec3f camera(0,0,1);
-    const Vec3f origin(0,0,0);
+    const Vec3f camera(0,0.5,1);
+    const Vec3f center(0,0.5,0);
     const Vec3f up(0,1,0);
 
-    LookAt(camera, origin, up);
-    // SetPerspectiveProjectMat(near, far);
-    QGL::SetPerspectiveProjectMat(camera, origin);
-    SetOrthogonalProjectMat(width, height, depth);
+    LookAt(camera, center, up);
+    SetProjectMat(fov, ratio, near, far);
     SetScreenMat(0, 0, width, height, depth);
 
     Init();
@@ -27,7 +27,9 @@ void Lab_0() {
     // 加载模型
     StrangeModel *marry = new StrangeModel("../asset/Marry/Marry.obj");
     marry->loadMap("../asset/Marry/MC003_Kozakura_Mari.png", QGL::MT_Diffuse);
-    marry->scale(100, 100, 1);
+    marry->scale(1, 1, 1);
+    marry->rotate(0, -30, 0);
+    marry->translate(0, -0.4, -2);
 
     // 
     Frame frame = Frame(width, height, 4);

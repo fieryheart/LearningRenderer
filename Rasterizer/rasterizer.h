@@ -14,7 +14,7 @@ extern int NUM_THREADS;
 // 一系列变换矩阵
 extern Matrix MAT_MODEL;
 extern Matrix MAT_VIEW;
-extern Matrix MAT_PERS_PROJECT;
+extern Matrix MAT_PROJECT;
 extern Matrix MAT_ORTHO_PROJECT;
 extern Matrix MAT_SCREEN;
 extern Matrix MAT_TRANS;
@@ -32,9 +32,7 @@ struct RasterNode {
 
 
 void LookAt(Vec3f eye, Vec3f center, Vec3f up);
-void SetPerspectiveProjectMat(float near, float far);
-void SetOrthogonalProjectMat(int l, int r, int b, int t, int n, int f);
-void SetOrthogonalProjectMat(int w, int h, int depth);
+void SetProjectMat(float fov, float ratio, float near, float far);
 void SetScreenMat(int x, int y, int w, int h, int depth);
 
 void SetPerspectiveProjectMat(Vec3f camera, Vec3f origin);

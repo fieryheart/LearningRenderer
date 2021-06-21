@@ -31,7 +31,12 @@ StrangeModel::StrangeModel(const char *filename) : verts(), normals(), textures(
         if (!line.compare(0, 2, "v ")) {    // 点
             iss >> trash;
             Vec3f v;
-            for (int i=0;i<3;i++) iss >> v[i];
+            for (int i=0;i<3;i++) {
+                iss >> v[i];
+            }
+            // v[0] = -v[0];
+            // v[1] = -v[1];
+            // v[2] = -v[2];
             verts.push_back(v);
         } else if (!line.compare(0, 2, "f ")) { // 面
             Vec3i v, vn, vt;
@@ -222,6 +227,33 @@ void StrangeModel::translate(float x, float y, float z) {
         v = trans*v;
         verts[i] = v.v3f();
     }
+}
+
+void StrangeModel::rotate(float x, float y, float z) {
+    Matrix rx = Matrix::identity(4);
+    Matrix ry = Matrix::identity(4);
+    Matrix rz = Matrix::identity(4);
+
+    rx[1][1] = rx[2][2] = cos(x*M_PI/180);
+    rx[2][1] = sin(x*M_PI/180);
+    rx[1][2] = -rx[2][1];
+
+    ry[0][0] = ry[2][2] = cos(y*M_PI/180);
+    ry[0][2] = sin(y*M_PI/180);
+    ry[2][0] = -ry[0][2];
+
+    rz[0][0] = rz[1][1] = cos(z*M_PI/180);
+    rz[1][0] = sin(z*M_PI/180);
+    rz[0][1] = -rz[1][0];
+
+    Matrix r = rx*ry*rz;
+
+    Vec4f v;
+    for (int i = 0; i < verts.size(); ++i) {
+        v = Vec4f(verts[i], 1.0f);
+        v = r*v;
+        verts[i] = v.v3f();
+    }    
 }
 
 

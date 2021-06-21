@@ -65,6 +65,7 @@ public:
 	virtual Vec3f randomRay(int nthface);
 	void scale(float width, float height, float depth);
 	void translate(float x, float y, float z);
+	void rotate(float x, float y, float z);
 };
 
 class BuildinModel : public Model {

@@ -16,6 +16,7 @@ struct InVert {
 
 struct OutVert {
     Vec4f sCoord;   // 屏幕坐标
+    float depth;
     OutVert(){}
 };
 

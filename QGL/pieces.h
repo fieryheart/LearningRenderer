@@ -42,7 +42,7 @@ struct Zbuffer {
     int height;
     std::vector<float> zbuffer;
     Zbuffer(int w, int h) : width(w), height(h){
-        zbuffer = std::vector<float>(w*h, 0.0f);
+        zbuffer = std::vector<float>(w*h, -std::numeric_limits<float>::max());
     }
     float get(int i, int j) {
         return zbuffer[i+width*j];
@@ -51,7 +51,7 @@ struct Zbuffer {
         zbuffer[i+width*j] = z;
     }
     void clear() {
-        std::fill(zbuffer.begin(), zbuffer.end(), 0.0f);
+        std::fill(zbuffer.begin(), zbuffer.end(), -std::numeric_limits<float>::max());
     }
 };
 

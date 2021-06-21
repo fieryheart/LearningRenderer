@@ -6,7 +6,7 @@ int NUM_THREADS = 8;
 
 Matrix MAT_MODEL = Matrix::identity(4);
 Matrix MAT_VIEW = Matrix::identity(4);
-Matrix MAT_PERS_PROJECT = Matrix::identity(4);
+Matrix MAT_PROJECT = Matrix::identity(4);
 Matrix MAT_ORTHO_PROJECT = Matrix::identity(4);
 Matrix MAT_SCREEN = Matrix::identity(4);     // 屏幕空间
 Matrix MAT_TRANS = Matrix::identity(4);
@@ -15,6 +15,9 @@ void LookAt(Vec3f eye, Vec3f center, Vec3f up) {
     Vec3f z = (eye - center).normalize();
     Vec3f x = (up^z).normalize();
     Vec3f y = (z^x).normalize();
+    std::cout << x;
+    std::cout << y;
+    std::cout << z;
     Matrix viewMatrix = Matrix::identity(4);
     Matrix mat = Matrix::identity(4);
     for (int i = 0; i < 3; ++i) {
@@ -26,42 +29,16 @@ void LookAt(Vec3f eye, Vec3f center, Vec3f up) {
     MAT_VIEW = viewMatrix*mat;
 }
 
-void SetPerspectiveProjectMat(float near, float far) {
-    MAT_PERS_PROJECT = Matrix::identity(4);
-    MAT_PERS_PROJECT[0][0] = near;
-    MAT_PERS_PROJECT[1][1] = near;
-    MAT_PERS_PROJECT[2][2] = near+far;
-    MAT_PERS_PROJECT[2][3] = -near*far;
-    MAT_PERS_PROJECT[3][2] = 1;
-}
-
-void SetOrthogonalProjectMat(int l, int r, int b, int t, int n, int f) {
-    MAT_ORTHO_PROJECT = Matrix::identity(4);
-    Matrix scale = Matrix::identity(4);
-    scale[0][0] = 2.0f/(r-l);
-    scale[1][1] = 2.0f/(t-b);
-    scale[2][2] = 2.0f/(n-f);
-
-    Matrix traslate = Matrix::identity(4);
-    traslate[0][3] = -(r+l)/2.0f;
-    traslate[1][3] = -(t+b)/2.0f;
-    traslate[2][3] = -(n+f)/2.0f;
-
-    MAT_ORTHO_PROJECT = scale*traslate*MAT_ORTHO_PROJECT;    
-}
-void SetOrthogonalProjectMat(int width, int height, int depth) {
-    MAT_ORTHO_PROJECT = Matrix::identity(4);
-    Matrix scale = Matrix::identity(4);
-    scale[0][0] = 2.0f/width;
-    scale[1][1] = 2.0f/height;
-    scale[2][2] = 2.0f/depth;
-    Matrix traslate = Matrix::identity(4);
-    MAT_ORTHO_PROJECT = scale*traslate*MAT_ORTHO_PROJECT;
-}
-
-void SetPerspectiveProjectMat(Vec3f camera, Vec3f origin) {
-    MAT_PERS_PROJECT = Matrix::identity(4);
-    MAT_PERS_PROJECT[3][2] = -1.f/(camera-origin).norm();
+void SetProjectMat(float fov, float ratio, float near, float far) {
+    MAT_PROJECT = Matrix::identity(4);
+    float d = 1/tan((fov/2)*M_PI/180);
+    float A = -(near+far)/(far-near);
+    float B = -2*far*near/(far-near);
+    MAT_PROJECT[0][0] = d/ratio;
+    MAT_PROJECT[1][1] = d;
+    MAT_PROJECT[2][2] = A;
+    MAT_PROJECT[2][3] = B;
+    MAT_PROJECT[3][2] = -1;
 }
 
 // 计算屏幕坐标
@@ -80,7 +57,7 @@ void SetScreenMat(int x, int y, int w, int h, int depth) {
 }
 
 void Init() {
-    MAT_TRANS = MAT_SCREEN*MAT_ORTHO_PROJECT*MAT_PERS_PROJECT*MAT_VIEW*MAT_MODEL;
+    MAT_TRANS = MAT_SCREEN*MAT_PROJECT*MAT_VIEW*MAT_MODEL;
 }
 
 Vec3f barycentric(Vec4f *pts, Vec2f P) {
@@ -111,21 +88,24 @@ void DrawTriangle(Vec4f *points, RasterNode &rn) {
         bboxmax.x = std::max(bboxmax.x, points[i].x);
         bboxmax.y = std::max(bboxmax.y, points[i].y);
     }
-    bboxmin.x = std::min(0.f, bboxmin.x);
-    bboxmin.y = std::min(0.f, bboxmin.y);
-    bboxmax.x = std::max(clamp.x, bboxmax.x);
-    bboxmax.y = std::max(clamp.y, bboxmax.y);
+    bboxmin.x = std::max(0.f, bboxmin.x);
+    bboxmin.y = std::max(0.f, bboxmin.y);
+    bboxmax.x = std::min(clamp.x, bboxmax.x);
+    bboxmax.y = std::min(clamp.y, bboxmax.y);
 
     Vec2i P;
     Vec3f bc;
     float z, w, depth, weight;
+    // std::cout << bboxmin;
+    // std::cout << bboxmax;
     for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
         for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) {
             bc = barycentric(points, Vec2f(P.x, P.y));
             z = points[0][2]*bc.x+points[1][2]*bc.y+points[2][2]*bc.z;
             w = points[0][3]*bc.x+points[1][3]*bc.y+points[2][3]*bc.z;
-            depth = std::max(0.f, std::min(1.0f, z/w));
-            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > depth) continue;
+            // z = z/w;
+            // depth = std::max(0.f, std::min(1.0f, z/w));
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0 || zbuffer->get(P.x, P.y) > z) continue;
             InFrag in;
             OutFrag out;
             in.bar = bc;
