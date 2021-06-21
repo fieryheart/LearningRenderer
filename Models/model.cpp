@@ -34,9 +34,6 @@ StrangeModel::StrangeModel(const char *filename) : verts(), normals(), textures(
             for (int i=0;i<3;i++) {
                 iss >> v[i];
             }
-            // v[0] = -v[0];
-            // v[1] = -v[1];
-            // v[2] = -v[2];
             verts.push_back(v);
         } else if (!line.compare(0, 2, "f ")) { // 面
             Vec3i v, vn, vt;

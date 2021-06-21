@@ -55,7 +55,7 @@ void Lab_0() {
     Rasterize(rn);
     timer.show();
 
-    std::string img = "../examples/TexShader/out.png";
+    std::string img = "../examples/TexShader/out_800*800.png";
     frame.flip();
     frame.draw(img.c_str());
 
