@@ -18,7 +18,7 @@ extern Matrix MAT_PROJECT;
 extern Matrix MAT_ORTHO_PROJECT;
 extern Matrix MAT_SCREEN;
 extern Matrix MAT_TRANS;
-
+extern Matrix MAT_NORM_TRANS;
 
 struct RasterNode {
     Model *model;

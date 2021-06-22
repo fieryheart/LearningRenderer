@@ -10,6 +10,7 @@ Matrix MAT_PROJECT = Matrix::identity(4);
 Matrix MAT_ORTHO_PROJECT = Matrix::identity(4);
 Matrix MAT_SCREEN = Matrix::identity(4);     // 屏幕空间
 Matrix MAT_TRANS = Matrix::identity(4);
+Matrix MAT_NORM_TRANS = Matrix::identity(4);
 
 void LookAt(Vec3f eye, Vec3f center, Vec3f up) {
     Vec3f z = (eye - center).normalize();
@@ -58,6 +59,7 @@ void SetScreenMat(int x, int y, int w, int h, int depth) {
 
 void Init() {
     MAT_TRANS = MAT_SCREEN*MAT_PROJECT*MAT_VIEW*MAT_MODEL;
+    MAT_NORM_TRANS = MAT_MODEL.inverse().transpose();
 }
 
 Vec3f barycentric(Vec4f *pts, Vec2f P) {

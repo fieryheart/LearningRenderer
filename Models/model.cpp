@@ -245,11 +245,18 @@ void StrangeModel::rotate(float x, float y, float z) {
 
     Matrix r = rx*ry*rz;
 
-    Vec4f v;
+    Vec4f v, vn;
     for (int i = 0; i < verts.size(); ++i) {
         v = Vec4f(verts[i], 1.0f);
         v = r*v;
         verts[i] = v.v3f();
+    }
+
+    Matrix r_i = r.inverse();
+    for (int i = 0; i < normals.size(); ++i) {
+        vn = Vec4f(normals[i], 1.0f);
+        vn = r_i*vn;
+        normals[i] = (vn.v3f()).normalize();
     }    
 }
 

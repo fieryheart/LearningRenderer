@@ -4,7 +4,6 @@
 #include "shader.h"
 
 namespace QGL {
-
 class TexShader : public Shader {
 public:
     StrangeModel *model;
@@ -33,7 +32,6 @@ public:
         return false;
     }
 };
-
 }
 
 #endif

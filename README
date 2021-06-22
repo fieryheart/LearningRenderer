@@ -14,8 +14,9 @@
 - Rasterizer
   - rasterizer.h
 
-- Shaders
-  - 
+- Shaders (因为只有main引用这些文件，所以都用.h文件来保存)
+  - TexShader.h
+  - PhongShader.h
 
 - PathTracing
   - PathTracing.h
