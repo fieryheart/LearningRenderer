@@ -25,7 +25,7 @@ void LookAt(Vec3f eye, Vec3f center, Vec3f up) {
         viewMatrix[0][i] = x[i];
         viewMatrix[1][i] = y[i];
         viewMatrix[2][i] = z[i];
-        mat[i][3] = -center[i];
+        mat[i][3] = -eye[i];
     }
     MAT_VIEW = viewMatrix*mat;
 }

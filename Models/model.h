@@ -60,6 +60,7 @@ public:
 	Vec2f tex(int nthface, int nthvert);
 	void preprocess();	// 顶点数据映射至[-1, 1]
 	void loadMap(const char *filename, MapType mt);
+	void loadMap(Vec4f color, MapType mt);
 	void sampleDiffuse(Vec2f uv, Vec4f &color);
 	void sampleDiffuse(int nthface, Vec3f bc, Vec4f &color);
 	virtual Vec3f randomRay(int nthface);

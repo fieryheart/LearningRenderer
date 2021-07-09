@@ -7,12 +7,14 @@ namespace QGL {
 class TexShader : public Shader {
 public:
     StrangeModel *model;
+    Vec3f camera;
 
+    Matrix uniform_mat_obj2view;
     Matrix uniform_mat_transform;
     Vec2f varying_uv[3];
     virtual void vertex(const InVert &in, OutVert &out) {
         Vec4f vertex = Vec4f(in.v, 1.0f);
-        float depth = vertex[2];
+        float depth = (uniform_mat_obj2view*vertex).z;
         vertex = uniform_mat_transform*vertex;
         vertex = vertex / vertex.w;
         vertex[2] = depth;

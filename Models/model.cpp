@@ -163,6 +163,17 @@ void StrangeModel::loadMap(const char *filename, MapType mt) {
     }
 }
 
+void StrangeModel::loadMap(Vec4f color, MapType mt) {
+    std::cout << "loadMap: ";
+    // 加载图片
+    Sample2D *sample2D = new Sample2D(color);
+    if (mt == MT_Diffuse) diffusemap_ = sample2D;
+    else {
+        std::cout << "The map doesn't exist in model." << std::endl;
+        delete sample2D;
+    }
+}
+
 void StrangeModel::sampleDiffuse(Vec2f uv, Vec4f &color) {
     if (diffusemap_) {
         diffusemap_->sample(uv, color);

@@ -11,6 +11,11 @@
   - types.h
     - ComType | MapType | ModelType | MatrialType
 
+- Models
+  - model.h
+    - StrangeModel: .obj模型文件
+    - BuilinModel
+
 - Rasterizer
   - rasterizer.h
 

@@ -35,6 +35,9 @@ struct Frame {
     void draw(const char *filename);
     void flip();
     Frame copy();
+    void clear() {
+        buffer = std::vector<Vec4f>(width*height, Vec4f(Vec3f(0.0f), 1.0f));
+    }
     void filter(std::vector<float> &kernel, int kw, int k);
 };
 
@@ -66,6 +69,13 @@ struct Sample2D {
     Sample2D(unsigned char *raw, int w, int h, int n) : width(w), height(h), channel(n) {
         for (int i = 0; i < w*h*n; ++i) {
             float val = ((int)raw[i])/255.0f;
+            data.push_back(val);
+        }
+    }
+    Sample2D(Vec4f color){
+        width = 1, height = 1, channel = 4;
+        for (int i = 0; i < 4; ++i) {
+            float val = ((int)color[i])/255.0f;
             data.push_back(val);
         }
     }

@@ -8,6 +8,7 @@ class PhongShader : public Shader {
 public:
     StrangeModel *model;
 
+    Matrix uniform_mat_obj2view;
     Matrix uniform_mat_transform;
     Matrix uniform_mat_norm_transform;
     Vec3f uniform_camera;
@@ -25,7 +26,7 @@ public:
 
         varying_vertex[in.nthvert] = in.v;
         Vec4f vertex = Vec4f(in.v, 1.0f);
-        float depth = vertex[2];
+        float depth = (uniform_mat_obj2view*vertex).z;
         vertex = uniform_mat_transform*vertex;
         vertex = vertex / vertex.w;
         vertex[2] = depth;
