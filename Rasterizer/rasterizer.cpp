@@ -161,5 +161,4 @@ void MultiRasterize(RasterNode &rn) {
     #pragma omp parallel for num_threads(NUM_THREADS)
     for (int i = 0; i < nfaces; ++i) {}
 }
-
 }
