@@ -1,29 +1,29 @@
 
 # 渲染结果
 ### 仅加载纹理
-![avatar](./examples/TexShader/Marry_2400*2400.png)
+![avatar](https://github.com/fieryheart/LearningRenderer/blob/master/examples/TexShader/Marry_2400*2400.png)
 分辨率：2400*2400
 
 ### Blinn Phong 模型
-![avatar](./examples/PhongShader/Marry_2400*2400.png)
+![avatar](https://github.com/fieryheart/LearningRenderer/blob/master/examples/PhongShader/Marry_2400*2400.png)
 分辨率：2400*2400  
 平行光
 
 ### 硬阴影
-![avatar](./examples/ShadowShader/Marry_2400*2400.png)
+![avatar](https://github.com/fieryheart/LearningRenderer/blob/master/examples/ShadowShader/Marry_2400*2400.png)
 分辨率：2400*2400
 
 深度图
-![avatar](./examples/ShadowShader/Marry_depth_2400*2400.png)
+![avatar](https://github.com/fieryheart/LearningRenderer/blob/master/examples/ShadowShader/Marry_depth_2400*2400.png)
 分辨率：2400*2400
 
 ### SSAO
-![avatar](./examples/SSAO/SSAO_800*800.png)  
+![avatar](https://github.com/fieryheart/LearningRenderer/blob/master/examples/SSAO/SSAO_800*800.png)  
 分辨率：800\*800   
 采样数：像素点\*方向(8)*步数(1000)  
 pow系数：50
 
-![avatar](./examples/SSAO/SSAO_2400*2400.png)
+![avatar](https://github.com/fieryheart/LearningRenderer/blob/master/examples/SSAO/SSAO_2400*2400.png)
 分辨率：2400\*2400  
 采样数：像素点*方向(8)*步数(1000)  
 pow系数：50
