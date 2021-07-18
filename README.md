@@ -1,3 +1,9 @@
+# Usage
+```
+  mkdir build && cd build
+  cmake ..
+  make
+```
 
 # 渲染结果
 ### 仅加载纹理
