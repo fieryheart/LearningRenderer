@@ -1,33 +1,42 @@
 
 # 渲染结果
 ### 仅加载纹理
-![avatar](./examples/TexShader/Marry_2400*2400.png)
-分辨率：2400*2400
+<div align=center>
+<img width="300" height="300" src="./examples/TexShader/Marry_2400*2400.png"/>
+</div>
+<!-- ![avatar](./examples/TexShader/Marry_2400*2400.png) -->  
 
-### Blinn Phong 模型
-![avatar](./examples/PhongShader/Marry_2400*2400.png)
-分辨率：2400*2400  
-平行光
+
+### Blinn Phong 模型 (平行光)
+<div align=center>
+<img width="300" height="300" src="./examples/PhongShader/Marry_2400*2400.png"/>
+</div>
+
 
 ### 硬阴影
-![avatar](./examples/ShadowShader/Marry_2400*2400.png)
-分辨率：2400*2400
+<div align=center>
+<img width="300" height="300" src="./examples/ShadowShader/Marry_2400*2400.png"/>
+</div>
 
 深度图
-![avatar](./examples/ShadowShader/Marry_depth_2400*2400.png)
-分辨率：2400*2400
+<div align=center>
+<img width="300" height="300" src="./examples/ShadowShader/Marry_depth_2400*2400.png"/>
+</div>
 
 ### SSAO
-![avatar](./examples/SSAO/SSAO_800*800.png)  
-分辨率：800\*800   
-采样数：像素点\*方向(8)*步数(1000)  
-pow系数：50
+<div align=center>
+<img width="300" height="300" src="./examples/SSAO/SSAO_800*800.png"/>
+<p>800*800</p>
+<p>采样数：像素点\*方向(8)*步数(1000)</p>
+<p>pow系数：50</p>
+</div>
 
-![avatar](./examples/SSAO/SSAO_2400*2400.png)
-分辨率：2400\*2400  
-采样数：像素点*方向(8)*步数(1000)  
-pow系数：50
-
+<div align=center>
+<img width="300" height="300" src="./examples/SSAO/SSAO_2400*2400.png"/>
+<p>2400*2400</p>
+<p>采样数：像素点\*方向(8)*步数(1000)</p>
+<p>pow系数：50</p>
+</div>
 
 
 # 项目结构
