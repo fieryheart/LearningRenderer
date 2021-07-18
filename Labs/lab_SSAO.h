@@ -16,8 +16,8 @@ void Lab_SSAO() {
     const float fov = 45.f;
     const float ratio = 1.f;
 
-    const Vec3f camera(3,2,3);
-    const Vec3f center(0,0,0);
+    const Vec3f camera(1.5,0.7,2);
+    const Vec3f center(0,0.7,0);
     const Vec3f up(0,1,0);
 
     // 加载模型
@@ -64,18 +64,18 @@ void Lab_SSAO() {
     timer.show();
 
 
-    log = Log(true, "Plane Shading: ");
-    depthShader.model = plane;
-    rn.model = plane;
-    rn.log = &log;
-    timer.update();
-    Rasterize(rn);
-    timer.show();
+    // log = Log(true, "Plane Shading: ");
+    // depthShader.model = plane;
+    // rn.model = plane;
+    // rn.log = &log;
+    // timer.update();
+    // Rasterize(rn);
+    // timer.show();
 
     Frame depthmap = frame.copy();
 
     // draw depthmap
-    std::string dimg = "../examples/SSAO/depth_2400*2400.png";
+    std::string dimg = "../examples/SSAO/depth_800*800.png";
     frame.flip();
     frame.draw(dimg.c_str());
 
@@ -87,7 +87,7 @@ void Lab_SSAO() {
     timer.show();
 
     // // draw SSAO image
-    std::string img = "../examples/SSAO/SSAO_2400*2400.png";
+    std::string img = "../examples/SSAO/SSAO_800*800.png";
     frame.flip();
     frame.draw(img.c_str());        
 
