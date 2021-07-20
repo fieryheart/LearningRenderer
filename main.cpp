@@ -6,6 +6,7 @@ int main()
     // Lab_Tex();
     // Lab_Phong();
     // Lab_Shadow();
-    Lab_SSAO();
+    // Lab_SSAO();
+    Lab_PT();
     return 0;
 }
