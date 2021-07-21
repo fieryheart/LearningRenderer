@@ -27,7 +27,8 @@ enum ModelType {
 enum MatrialType {
     MTT_Diffuse = 0,
     MTT_Mirror,
-    MTT_Glossy
+    MTT_Glossy,
+    MTT_Transparent
 };
 }
 

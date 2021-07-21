@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <random>
 #include "../Geometry/geometry.h"
 
 using namespace std::chrono;
@@ -105,8 +106,14 @@ struct Sample2D {
     }
 };
 
-
-
+// 随机发生器
+template <class T1, class T2> struct Randomizer {
+    std::default_random_engine random;
+    T1 dist;
+    Randomizer<T1, T2>() {}
+    Randomizer<T1, T2>(std::default_random_engine r, T1 d) : random(r), dist(d) {}
+    T2 get() {return dist(random);}
+};
 
 //>>>=========================================
 //

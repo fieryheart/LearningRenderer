@@ -43,6 +43,8 @@ BVHTriangle::BVHTriangle(Model *model_, int nthface_) {
     nthface = nthface_;
     minP = Vec3f(std::numeric_limits<float>::max());
     maxP = Vec3f(-std::numeric_limits<float>::max());
+
+    // 获取当前面的相关信息
     for (int i = 0; i < 3; ++i) {
         minP[i] = std::min(minP[i], model->vert(nthface, 0)[i]);
         minP[i] = std::min(minP[i], model->vert(nthface, 1)[i]);
@@ -130,7 +132,7 @@ int BVHNode::getaabb(std::vector<BVHTriangle*> &objects, int left, int right) {
 }
 
 int BVHNode::BVHSort(std::vector<BVHTriangle*> &objects, int left, int right, int axis) {
-    // sort
+    // sort, 根据重点排序
     BVHTriangle* tmp = NULL;
     if (objects[left]->centroid[axis] > objects[right]->centroid[axis]) {
         tmp = objects[left];
@@ -210,7 +212,7 @@ void BVHNode::deleteBVHNode(BVHNode* root) {
 
 //
 BVHBuilder::BVHBuilder(std::vector<Model*> models) {
-    std::cout << "BVHBuilder" << std::endl;
+    // std::cout << "BVHBuilder" << std::endl;
 
     for (int i = 0; i < models.size(); ++i) {
         for (int j = 0; j < models[i]->nfaces(); ++j) {
@@ -222,6 +224,7 @@ BVHBuilder::BVHBuilder(std::vector<Model*> models) {
         }
     }
 
+    // 快速
     root = new BVHNode(tris, 0, (int)tris.size()-1);
 }
 

@@ -18,7 +18,7 @@ struct PTNode {
 };
 
 // 路径追踪
-void RenderingByPathTracing(PTNode &in);
+void PathTracing(PTNode &in);
 Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p);
 
 }

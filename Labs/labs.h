@@ -4,3 +4,5 @@
 #include "lab_SSAO.h"
 
 #include "lab_pt.h"
+
+#include "lab_test.h"
