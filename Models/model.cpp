@@ -92,7 +92,7 @@ Vec3f StrangeModel::norm(int nthface, int nthvert) {
 Vec3f StrangeModel::norm(int nthface, Vec3f bc) {
     Vec3f vn[3];
     for (int i = 0; i < 3; ++i) vn[i] = norm(nthface, i);
-    return vn[0]*bc[0]+vn[1]*bc[1]+vn[2]*bc[2];
+    return (vn[0]*bc[0]+vn[1]*bc[1]+vn[2]*bc[2]).normalize();
 }
 
 Vec2f StrangeModel::tex(int nthface, int nthvert) {
@@ -268,7 +268,7 @@ void StrangeModel::rotate(float x, float y, float z) {
         vn = Vec4f(normals[i], 1.0f);
         vn = r_i*vn;
         normals[i] = (vn.v3f()).normalize();
-    }    
+    }
 }
 
 

@@ -9,7 +9,7 @@ int PT_NUM_THREADS = 8;
 Vec4f BACKGROUND_COLOR = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
 
 int PATH_TRACING_N = 100;
-float PATH_TRACING_P_RR = 0.9;
+float PATH_TRACING_P_RR = 0.5;
 // std::mt19937 PATH_TRACING_RNG;
 // std::uniform_real_distribution<float> PATH_TRACING_UNIFORM_DIST = std::uniform_real_distribution<float>(0, 1);
 
@@ -103,9 +103,9 @@ void PathTracing(PTNode &ptn) {
 
                     // 单个光线路径追踪
                     one_ray_color = RayTracing(bvh, ray, index, bc, p);
-                    one_ray_color[0] = std::min(1.0f, one_ray_color[0]);
-                    one_ray_color[1] = std::min(1.0f, one_ray_color[1]);
-                    one_ray_color[2] = std::min(1.0f, one_ray_color[2]);
+                    one_ray_color[0] = std::clamp(one_ray_color[0], 0.0f, 1.0f);
+                    one_ray_color[1] = std::clamp(one_ray_color[1], 0.0f, 1.0f);
+                    one_ray_color[2] = std::clamp(one_ray_color[2], 0.0f, 1.0f);
                 } else {
                     one_ray_color = Vec4f(0.0f);
                 }
@@ -136,8 +136,9 @@ void PathTracing(PTNode &ptn) {
 //      p: 空间坐标点
 //      bc: 重心系数
 //
+
 Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
-    Vec3f lp, next_p, N_p, N_lp;
+    Vec3f lp, next_p, N_p = Vec3f(1,0,0), N_lp = Vec3f(1,0,0);
     BVHTriangle *tri = bvh->tris[index];
     float k_r = 0.0f, f_r = 0.0f, L_i = 0.0f, dis = 0.0f;
     Vec4f lcolor, diffColor, L_e = Vec4f(0.0f), L_dir = Vec4f(0.0f), L_indir = Vec4f(0.0f);
@@ -179,6 +180,7 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
     if (tri->model->type() == MDT_Buildin) {
         BuildinModel *bm = dynamic_cast<BuildinModel*>(tri->model);
         N_p = bm->norm(tri->nthface, 0);
+        // std::cout << "buildin-np: " << N_p;
         p = p+N_p*0.05f;
         lp = bvh->light->randomSample(); // uniformly sample the light.
         N_lp = bvh->light->norm(0, 0);
@@ -216,6 +218,8 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
 
         StrangeModel *sm = dynamic_cast<StrangeModel*>(tri->model);
         N_p = sm->norm(tri->nthface, bc);
+        // std::cout << "strange-np: " << N_p;
+
         p = p + N_p*0.5f;
         lp = bvh->light->randomSample(); // uniformly sample the light.
         N_lp = bvh->light->norm(0, 0);
@@ -238,7 +242,9 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
             // if (-(N_p*w1) < 0) {
             //     k_r = L_i * f_r * (N_p*w1) * (N_lp*w1) / dis / bvh->light->pdf();
             // } else {
-            k_r = L_i * f_r * -(N_p*w1) * (N_lp*w1) / dis / bvh->light->pdf();
+            float p_k = -(N_p*w1);
+            // if (p_k < 0.0f && p_k > -0.2f) p_k = -p_k;
+            k_r = L_i * f_r * p_k * (N_lp*w1) / dis / bvh->light->pdf();
             // }
 
             k_r = std::clamp(k_r, 0.0f, 1.0f);
@@ -250,7 +256,7 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
             L_dir = diffColor*k_r;
         }
 
-        // k_r = std::clamp(k_r, 0.1f, 1.0f);
+        // k_r = std::clamp(k_r, 0.2f, 1.0f);
         // L_dir = diffColor*k_r;
     }
 
@@ -260,48 +266,36 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
     *  Contribution from other reflections.
     *
     */
-    float ksi = random01.get();
-    if (ksi > PATH_TRACING_P_RR) return L_e + L_dir;
+    if (tri->model->type() != MDT_Light) {
+        float ksi = random01.get();
+        if (ksi > PATH_TRACING_P_RR) return L_e + L_dir;
 
-    // Randomly choose ONE direction wi~pdf(w)
-    Vec3f tmp = (Vec3f(random11.get(), random11.get(), random11.get())).normalize();
-    Vec3f dir;
-    if (N_p*tmp < 0) {
-        dir = (N_p + tmp + N_p).normalize();
-    } else if (N_p*tmp == 0) {
-        dir = N_p;
-    } else {
-        dir = tmp;
+        // Randomly choose ONE direction wi~pdf(w)
+        Vec3f tmp = (Vec3f(random11.get(), random11.get(), random11.get())).normalize();
+        Vec3f dir;
+        if (N_p*tmp < 0) {
+            dir = (N_p + tmp + N_p).normalize();
+        } else if (N_p*tmp == 0) {
+            dir = N_p;
+        } else {
+            dir = tmp;
+        }
+
+        Ray next_ray = Ray(p, dir);
+
+        index = -1;
+        RayInteract(bvh, next_ray, index, bc, next_p);
+        if (index == -1 || bvh->tris[index]->model->type() == MDT_Light) return L_e + L_dir;
+
+        tmp_w = dir;
+        float indir_k = (N_p*tmp_w) / PATH_TRACING_P_RR;
+        indir_k = std::clamp(indir_k, 0.0f, 1.0f);
+        L_indir = RayTracing(bvh, next_ray, index, bc, next_p);
+        L_indir = L_indir * indir_k;
     }
-    Ray next_ray = Ray(p, dir);
 
-    index = -1;
-    RayInteract(bvh, next_ray, index, bc, next_p);
-    if (index == -1 || bvh->tris[index]->model->type() == MDT_Light) return L_e + L_dir;
-
-
-    tmp_w = next_p - p;
-    // 
-    float indir_k = (N_p*tmp_w) / PATH_TRACING_P_RR;
-    indir_k = std::clamp(indir_k, 0.0f, 1.0f);
-    // if (!isDir) indir_k = 1.0f;
-
-    L_indir = RayTracing(bvh, next_ray, index, bc, next_p);
-    L_indir = L_indir * indir_k;
-
-    // if (L_e[0] == 0.0f && L_e[1] == 0.0f && L_e[2] == 0.0f
-    // &&  L_dir[0] == 0.0f && L_dir[1] == 0.0f && L_dir[2] == 0.0f) {
-    //     // std::cout << L_indir;
-    //     // std::cout << (N_p*w0) / PATH_TRACING_P_RR << std::endl;
-    // }
-
-    // L_indir = RayTracing(bvh, next_ray, index, bc, next_p) * (N_p*w0) / PATH_TRACING_P_RR;
-    // L_indir[0] = std::clamp(L_indir[0], 0.0f, 1.0f);
-    // L_indir[1] = std::clamp(L_indir[1], 0.0f, 1.0f);
-    // L_indir[2] = std::clamp(L_indir[2], 0.0f, 1.0f);
 
     return L_e + L_dir + L_indir;
-    // return L_e + L_dir;
 }
 
 
