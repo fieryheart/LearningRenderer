@@ -101,7 +101,7 @@ public:
         } else {
             Vec3f dir = (uniform_light-v.v3f()).normalize();
 
-            Vec3f N = varying_normal[0]*bar[0]+varying_normal[1]*bar[1]+varying_normal[2]*bar[2];
+            Vec3f N = (varying_normal[0]*bar[0]+varying_normal[1]*bar[1]+varying_normal[2]*bar[2]).normalize();
             float diffuse = std::max(0.0f, dir*N);
 
             Vec3f view = uniform_camera-v.v3f();

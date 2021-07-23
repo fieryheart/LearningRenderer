@@ -7,7 +7,7 @@ int main()
     // Lab_Phong();
     // Lab_Shadow();
     // Lab_SSAO();
-    Lab_PT();
+    // Lab_PT();
 
     // Lab_Test();
     return 0;

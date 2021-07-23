@@ -44,6 +44,21 @@
 <p>pow系数：50</p>
 </div>
 
+### Path Tracing
+<div align=center>
+<img width="500" height="500" src="./examples/PathTracing/box_2400*2400_spp100_RR0.5_1.png"/>
+<p>2400*2400</p>
+<p>spp: 100</p>
+<p>Russion Roulette：0.5</p>
+</div>
+
+<div align=center>
+<img width="500" height="500" src="./examples/PathTracing/box_2400*2400_spp100_RR0.9.png"/>
+<p>2400*2400</p>
+<p>spp: 100</p>
+<p>Russion Roulette：0.9</p>
+</div>
+
 
 # 项目结构
 
@@ -75,8 +90,8 @@
   - TexShader.h
   - PhongShader.h
 
-- PathTracing
-  - PathTracing.h
+- RayTracing  
+光线追踪渲染器(路径追踪算法)
 
 - Geometry
   - geometry.h
