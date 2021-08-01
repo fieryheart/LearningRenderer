@@ -77,10 +77,10 @@ void BVHTriangle::interact(InInteract &in, OutInteract &out) {
     s = ray.pos - vert[0];
     s1 = (ray.dir)^e2;
     s2 = s^e1;
-    float se = s1*e1;
-    tt = s2*e2/se;
-    b1 = s1*s/se;
-    b2 = s2*(ray.dir)/se;
+    float se = dot(s1, e1);
+    tt = dot(s2,e2)/se;
+    b1 = dot(s1,s)/se;
+    b2 = dot(s2, ray.dir)/se;
 
     Vec3f p = ray.launch(tt);
 

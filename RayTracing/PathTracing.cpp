@@ -8,7 +8,7 @@ namespace QGL {
 int PT_NUM_THREADS = 8;
 Vec4f BACKGROUND_COLOR = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
 
-int PATH_TRACING_N = 100;
+int PATH_TRACING_N = 500;
 float PATH_TRACING_P_RR = 0.5;
 // std::mt19937 PATH_TRACING_RNG;
 // std::uniform_real_distribution<float> PATH_TRACING_UNIFORM_DIST = std::uniform_real_distribution<float>(0, 1);
@@ -19,6 +19,16 @@ std::uniform_real_distribution<float> dist01(0.0, 1.0);
 std::uniform_real_distribution<float> dist11(-1.0, 1.0);
 Randomizer<std::uniform_real_distribution<float>, float> random01(random, dist01);
 Randomizer<std::uniform_real_distribution<float>, float> random11(random, dist11);
+
+Vec2f Hammersley(uint32_t i, uint32_t N) { // 0-1
+    uint32_t bits = (i << 16u) | (i >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    float rdi = float(bits) * 2.3283064365386963e-10;
+    return {float(i) / float(N), rdi};
+}
 
 
 bool RayInteract(BVHBuilder *bvh, Ray &ray, int &index, Vec3f &bc, Vec3f &p) {
@@ -102,7 +112,8 @@ void PathTracing(PTNode &ptn) {
                     // printf("%d %d\n", i, j);
 
                     // 单个光线路径追踪
-                    one_ray_color = RayTracing(bvh, ray, index, bc, p);
+                    one_ray_color = PTShading(bvh, ray, index, bc, p);
+                    one_ray_color = vpow(one_ray_color, 0.45);
                     one_ray_color[0] = std::clamp(one_ray_color[0], 0.0f, 1.0f);
                     one_ray_color[1] = std::clamp(one_ray_color[1], 0.0f, 1.0f);
                     one_ray_color[2] = std::clamp(one_ray_color[2], 0.0f, 1.0f);
@@ -110,8 +121,12 @@ void PathTracing(PTNode &ptn) {
                     one_ray_color = Vec4f(0.0f);
                 }
 
-                color = color + one_ray_color / (PATH_TRACING_N*1.0f);
+                // color = color + one_ray_color / (PATH_TRACING_N*1.0f);
+                one_ray_color = vpow(one_ray_color, 2.2);
+                color = color + one_ray_color;
             }
+            color = color / (PATH_TRACING_N*1.0f);
+            color = vpow(color, 0.45);
             // std::cout << dir;
             // color[0] = std::min(1.0f, color[0]);
             // color[1] = std::min(1.0f, color[1]);
@@ -128,7 +143,6 @@ void PathTracing(PTNode &ptn) {
     }
 }
 
-
 //
 // 参数：
 //      bvh
@@ -136,134 +150,113 @@ void PathTracing(PTNode &ptn) {
 //      p: 空间坐标点
 //      bc: 重心系数
 //
-
-Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
-    Vec3f lp, next_p, N_p = Vec3f(1,0,0), N_lp = Vec3f(1,0,0);
+Vec4f PTShading(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
+    Vec3f l_p, next_p, N_p = Vec3f(1,0,0), N_l = Vec3f(1,0,0);
     BVHTriangle *tri = bvh->tris[index];
-    float k_r = 0.0f, f_r = 0.0f, L_i = 0.0f, dis = 0.0f;
-    Vec4f lcolor, diffColor, L_e = Vec4f(0.0f), L_dir = Vec4f(0.0f), L_indir = Vec4f(0.0f);
-    Vec3f w0, w1, tmp_w;
+    float dis = 0.0f;
+    Vec4f color_l, color_diff, f_r, L_i = Vec4f(0.0f), L_e = Vec4f(0.0f), L_dir = Vec4f(0.0f), L_indir = Vec4f(0.0f);
+    Vec3f wi, wo;
 
     /*
     * 
-    *  Contribution from itself.
+    *  Light Source
     *
     */
     if (tri->model->type() == MDT_Light) {
         LightModel *lm = dynamic_cast<LightModel*>(tri->model);
-        lcolor = lm->getColor();
         L_i = lm->emit();
-        f_r = 1 / (2*M_PI);
-        // k_r = L_i*f_r/(ray.pos-p).norm()/lm->pdf();
+        f_r = 1 / M_PI;
 
-        // 获取 光线方向
-        Vec3f light_dir = (Vec3f(0, -0.5, -1)).normalize();
-        if (-light_dir * ray.dir < 0) {
-            k_r = 0.0f;
-        } else {
-            k_r = L_i*f_r/(ray.pos-p).norm();
-            k_r = std::clamp(k_r, 0.0f, 1.0f);
-        }
-        L_e = lcolor*k_r;
-        // std::cout << lcolor << " " << k_r << std::endl;
+        // 获取光源法向量 N_l
+        // 判断是否打到光源
+        // Le = I*fd*cos(N_l, light_p-camrea)
+        // fd = color_l / Pi
+        
+        // Vec3f light_dir = (Vec3f(0, -0.5, -1)).normalize();
+        // if (-light_dir * ray.dir < 0) {
+        //     k_r = 0.0f;
+        // } else {
+        //     k_r = L_i*f_r*();
+        //     k_r = std::clamp(k_r, 0.0f, 1.0f);
+        // }
     }
-    // return L_e;
 
     /*
     * 
-    *  Contribution from the light source
+    *  Direct Illumination
     *
     */
-    L_i = bvh->light->emit();
-    lcolor = bvh->light->getColor();
-    float diff_k = 0.7, light_k = 0.3;
     if (tri->model->type() == MDT_Buildin) {
         BuildinModel *bm = dynamic_cast<BuildinModel*>(tri->model);
         N_p = bm->norm(tri->nthface, 0);
         // std::cout << "buildin-np: " << N_p;
+
         p = p+N_p*0.05f;
-        lp = bvh->light->randomSample(); // uniformly sample the light.
-        N_lp = bvh->light->norm(0, 0);
-        w0 = (ray.pos-p).normalize();
-        w1 = (p-lp).normalize();
+        L_i = bvh->light->emit();
+        l_p = bvh->light->randomSample(); // uniformly sample the light.
+        N_l = bvh->light->norm(0, 0);
+        // w0 = (ray.pos-p).normalize();
+        // w1 = (p-lp).normalize();
+        wi = (l_p-p).normalize();
+        wo = -ray.dir;
 
         // occlusion
-        Ray trashRay = Ray(p, -w1);
-        int tmpIdx = -1;
+        Ray trashRay = Ray(p, wi);
+        int trashIdx = -1;
         Vec3f trashBC, tmpP;
-        RayInteract(bvh, trashRay, tmpIdx, trashBC, tmpP);
+        RayInteract(bvh, trashRay, trashIdx, trashBC, tmpP);
+
+        bm->sampleDiffuse(tri->nthface, color_diff);
         // 只有一个光源，暂时先这么写～
-        if (tmpIdx != -1 && bvh->tris[tmpIdx]->model->type() == MDT_Light) {
-            dis = (p-lp).norm2();
-            // if (dis < 20.0f) dis += 20.0f;
-            f_r = bm->brdf(tri->nthface, p, w0, -w1);
-            k_r = L_i * f_r * -(N_p*w1) * (N_lp*w1) / dis / bvh->light->pdf();
+        if (trashIdx != -1 && bvh->tris[trashIdx]->model->type() == MDT_Light) {
+            dis = (p-l_p).norm2();
             
-            k_r = std::clamp(k_r, 0.0f, 1.0f);
-            // printf("%f\n", k_r);
-            bm->sampleDiffuse(tri->nthface, diffColor);
-            
-            
-            // if (diffColor[0] == 1.0f && diffColor[1] == 1.0f && diffColor[2] == 1.0f) {
-            //     diff_k = 0.f;
-            //     light_k = 1.0f;
-            // }
-            // L_dir = (diffColor*diff_k + lcolor*light_k)*k_r;
-            L_dir = diffColor*k_r;
+            color_diff = vpow(color_diff, 2.2);
+            f_r = color_diff * bm->brdf(tri->nthface, p, wi, wo);
+
+            float cosTheta0 = std::max(0.0f, dot(N_p, wi));
+            float cosTheta1 = std::max(0.0f, -dot(N_l, wi));
+            L_dir = L_i * f_r * cosTheta0 * cosTheta1 / dis / bvh->light->pdf();
         }
 
+        // environment light
+        // L_dir = L_dir + vpow(vpow(diffColor, 2.2) * 0.05, 0.45);
 
     } else if (tri->model->type() == MDT_Strange) {
-        // L_dir = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
-
         StrangeModel *sm = dynamic_cast<StrangeModel*>(tri->model);
         N_p = sm->norm(tri->nthface, bc);
         // std::cout << "strange-np: " << N_p;
 
         p = p + N_p*0.5f;
-        lp = bvh->light->randomSample(); // uniformly sample the light.
-        N_lp = bvh->light->norm(0, 0);
-        w0 = (ray.pos-p).normalize();
-        w1 = (p-lp).normalize();
+        L_i = bvh->light->emit();
+        l_p = bvh->light->randomSample(); // uniformly sample the light.
+        N_l = bvh->light->norm(0, 0);
+        wi = (l_p-p).normalize();
+        wo = -ray.dir;
 
         // occlusion
-        Ray trashRay = Ray(p, -w1);
-        int tmpIdx = -1;
+        Ray trashRay = Ray(p, wi);
+        int trashIdx = -1;
         Vec3f trashBC, tmpP;
-        RayInteract(bvh, trashRay, tmpIdx, trashBC, tmpP);
-        sm->sampleDiffuse(tri->nthface, bc, diffColor);
-
+        RayInteract(bvh, trashRay, trashIdx, trashBC, tmpP);
+        
+        sm->sampleDiffuse(tri->nthface, bc, color_diff);
         // 只有一个光源，暂时先这么写～
-        if (tmpIdx != -1 && bvh->tris[tmpIdx]->model->type() == MDT_Light) {
-            dis = (p-lp).norm2();
-            // if (dis < 20.0f) dis += 20.0f;
-            f_r = sm->brdf(tri->nthface, p, w0, -w1);
-            // k_r = L_i * f_r * (N_p*w0) * (N_lp*w1) / dis / bvh->light->pdf();
-            // if (-(N_p*w1) < 0) {
-            //     k_r = L_i * f_r * (N_p*w1) * (N_lp*w1) / dis / bvh->light->pdf();
-            // } else {
-            float p_k = -(N_p*w1);
-            // if (p_k < 0.0f && p_k > -0.2f) p_k = -p_k;
-            k_r = L_i * f_r * p_k * (N_lp*w1) / dis / bvh->light->pdf();
-            // }
+        if (trashIdx != -1 && bvh->tris[trashIdx]->model->type() == MDT_Light) {
+            dis = (p-l_p).norm2();
+            
+            f_r = color_diff * sm->brdf(tri->nthface, p, wi, wo);
 
-            k_r = std::clamp(k_r, 0.0f, 1.0f);
-            // if (diffColor[0] == 1.0f && diffColor[1] == 1.0f && diffColor[2] == 1.0f) {
-            //     diff_k = 0.f;
-            //     light_k = 1.0f;
-            // }
-            // L_dir = (diffColor*diff_k + lcolor*light_k)*k_r;
-            L_dir = diffColor*k_r;
+            float cosTheta0 = std::max(0.0f, dot(N_p, wi));
+            float cosTheta1 = std::max(0.0f, -dot(N_l, wi));
+            L_dir = L_i * f_r * cosTheta0 * cosTheta1 / dis / bvh->light->pdf();
         }
-
-        // k_r = std::clamp(k_r, 0.2f, 1.0f);
-        // L_dir = diffColor*k_r;
     }
-
+    
 
     /*
     * 
-    *  Contribution from other reflections.
+    *  Indirect Illumination
     *
     */
     if (tri->model->type() != MDT_Light) {
@@ -271,11 +264,12 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
         if (ksi > PATH_TRACING_P_RR) return L_e + L_dir;
 
         // Randomly choose ONE direction wi~pdf(w)
+        // 没有均匀采样
         Vec3f tmp = (Vec3f(random11.get(), random11.get(), random11.get())).normalize();
         Vec3f dir;
-        if (N_p*tmp < 0) {
+        if (dot(N_p, tmp) < 0) {
             dir = (N_p + tmp + N_p).normalize();
-        } else if (N_p*tmp == 0) {
+        } else if (dot(N_p, tmp) == 0) {
             dir = N_p;
         } else {
             dir = tmp;
@@ -287,16 +281,14 @@ Vec4f RayTracing(BVHBuilder *bvh, Ray &ray, int index, Vec3f bc, Vec3f p) {
         RayInteract(bvh, next_ray, index, bc, next_p);
         if (index == -1 || bvh->tris[index]->model->type() == MDT_Light) return L_e + L_dir;
 
-        tmp_w = dir;
-        float indir_k = (N_p*tmp_w) / PATH_TRACING_P_RR;
-        indir_k = std::clamp(indir_k, 0.0f, 1.0f);
-        L_indir = RayTracing(bvh, next_ray, index, bc, next_p);
-        L_indir = L_indir * indir_k;
+        wi = dir;
+        float cosTheta = std::max(0.0f, dot(N_p, wi));
+        float k_indir = 2 * cosTheta / PATH_TRACING_P_RR;
+        // indir_k = std::clamp(indir_k, 0.0f, 1.0f);
+        L_indir = PTShading(bvh, next_ray, index, bc, next_p) * color_diff * k_indir;
     }
 
 
     return L_e + L_dir + L_indir;
 }
-
-
 }

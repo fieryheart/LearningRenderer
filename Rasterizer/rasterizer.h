@@ -1,7 +1,7 @@
 #ifndef __RASTERIZER_H__
 #define __RASTERIZER_H__
 
-#include "../Geometry/geometry.h"
+#include "../Vec/vec.h"
 #include "../QGL/pieces.h"
 #include "../QGL/types.h"
 #include "../Shaders/shader.h"

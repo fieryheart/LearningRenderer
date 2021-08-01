@@ -75,7 +75,7 @@ StrangeModel::~StrangeModel() {
 
 float StrangeModel::brdf(int nthface, Vec3f p, Vec3f wi, Vec3f wo) {
     if (mtt == MT_Diffuse) {
-        return 1.0f / (2*M_PI);
+        return 1.0f / M_PI;
     } else {
         return 0.0f;
     }
@@ -293,7 +293,7 @@ BuildinModel::BuildinModel(std::vector<Vec3f> &verts_,
 
 float BuildinModel::brdf(int nthface, Vec3f p, Vec3f wi, Vec3f wo) {
     if (mt_types[nthface] == MT_Diffuse) {
-        return 1.0f / (2*M_PI);
+        return 1.0f / M_PI;
     } else {
         return 0.0f;
     }
@@ -375,8 +375,8 @@ Vec4f LightModel::getColor() {
     return color;
 }
 
-float LightModel::emit() {
-    return intensity;
+Vec4f LightModel::emit() {
+    return vpow(color, 2.2)*intensity;
 }
 
 float LightModel::pdf() {

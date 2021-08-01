@@ -42,12 +42,12 @@ public:
         Vec3f dir = -uniform_light;
 
         Vec3f N = varying_normal[0]*bar[0]+varying_normal[1]*bar[1]+varying_normal[2]*bar[2];
-        float diffuse = std::max(0.0f, dir*N);
+        float diffuse = std::max(0.0f, dot(dir, N));
 
         Vec3f v = varying_vertex[0]*bar[0]+varying_vertex[1]*bar[1]+varying_vertex[2]*bar[2];
         Vec3f view = uniform_camera-v;
         Vec3f h = (view + dir).normalize();
-        float a = std::max(0.0f, h*N);
+        float a = std::max(0.0f, dot(h, N));
         float specular = std::pow(a, 5.f);
 
         Vec2f uv = varying_uv[0]*bar[0]+varying_uv[1]*bar[1]+varying_uv[2]*bar[2];

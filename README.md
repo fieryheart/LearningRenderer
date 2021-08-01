@@ -46,14 +46,14 @@
 
 ### Path Tracing
 <div align=center>
-<img width="500" height="500" src="./examples/PathTracing/box_2400*2400_spp100_RR0.5_1.png"/>
-<p>2400*2400</p>
+<img width="500" height="500" src="./examples/PathTracing/box_800*800_spp10_RR0.9_i30.png"/>
+<p>800*800</p>
 <p>spp: 100</p>
-<p>Russion Roulette：0.5</p>
+<p>Russion Roulette：0.9</p>
 </div>
 
 <div align=center>
-<img width="500" height="500" src="./examples/PathTracing/box_2400*2400_spp100_RR0.9.png"/>
+<img width="500" height="500" src="./examples/PathTracing/box_2400*2400_spp500_RR0.9_i30.png"/>
 <p>2400*2400</p>
 <p>spp: 100</p>
 <p>Russion Roulette：0.9</p>
@@ -93,8 +93,8 @@
 - RayTracing  
 光线追踪渲染器(路径追踪算法)
 
-- Geometry
-  - geometry.h
+- Vec
+  - vec.h
     - Vec2<> | Vec3<> | Vec4<> | Matrix<>
 
 - Utils

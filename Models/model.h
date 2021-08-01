@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <random>
-#include "../Geometry/geometry.h"
+#include "../Vec/vec.h"
 #include "../QGL/types.h"
 #include "../QGL/pieces.h"
 
@@ -123,7 +123,7 @@ public:
 	Vec3f randomSample();
 	virtual Vec3f randomRay(int nthface);
 	Vec4f getColor();
-	float emit();
+	Vec4f emit();
 	float pdf();
 };
 }

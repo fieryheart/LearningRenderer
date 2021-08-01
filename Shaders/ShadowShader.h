@@ -102,11 +102,11 @@ public:
             Vec3f dir = (uniform_light-v.v3f()).normalize();
 
             Vec3f N = (varying_normal[0]*bar[0]+varying_normal[1]*bar[1]+varying_normal[2]*bar[2]).normalize();
-            float diffuse = std::max(0.0f, dir*N);
+            float diffuse = std::max(0.0f, dot(dir, N));
 
             Vec3f view = uniform_camera-v.v3f();
             Vec3f h = (view + dir).normalize();
-            float a = std::max(0.0f, h*N);
+            float a = std::max(0.0f, dot(h, N));
             float specular = std::pow(a, 5.f);
 
             color = color*(Kd*diffuse+Ks*specular+Ka);

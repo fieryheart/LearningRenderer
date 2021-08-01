@@ -6,8 +6,8 @@
 using namespace QGL;
 
 void Lab_PT() {
-    const int width = 2400;
-    const int height = 2400;
+    const int width = 800;
+    const int height = 800;
     Vec3f camera = Vec3f(0.0f, 0.0f, 0.0f);
     Frame frame = Frame(width, height, 4);
 
@@ -25,9 +25,9 @@ void Lab_PT() {
                                      Vec3f(0, 1, 0), Vec3f(0, 1, 0),
                                      Vec3f(0, 0, 1), Vec3f(0, 0, 1),
                                      Vec3f(0, 0, -1), Vec3f(0, 0, -1)};
-    std::vector<Vec4f> colors{Vec4f(1.0f, 0.0f, 0.0f, 1.0f),Vec4f(1.0f, 0.0f, 0.0f, 1.0f),
+    std::vector<Vec4f> colors{Vec4f(0.902, 0.5333, 0.2118, 1.0f),Vec4f(0.902, 0.5333, 0.2118, 1.0f),
                               Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f),
-                              Vec4f(0.0f, 1.0f, 0.0f, 1.0f),Vec4f(0.0f, 1.0f, 0.0f, 1.0f),
+                              Vec4f(0.1961, 0.8471, 0.4902, 1.0f),Vec4f(0.1961, 0.8471, 0.4902, 1.0f),
                               Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f),
                               Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f),
                               Vec4f(1.0f, 1.0f, 1.0f, 1.0f),Vec4f(1.0f, 1.0f, 1.0f, 1.0f)};
@@ -51,12 +51,12 @@ void Lab_PT() {
     // light
     std::vector<Vec3f> light_verts{Vec3f(l/5, t, n), Vec3f(l/5, t-3, n+1),
                                    Vec3f(r/5, t, n),  Vec3f(r/5, t-3, n+1)};
-    Vec3f light_dir = (Vec3f(0, -0.5, -1)).normalize();
+    Vec3f light_dir = (Vec3f(0, 0, -1)).normalize();
     std::vector<Vec3f> light_normals{light_dir, light_dir};
     std::vector<Vec3i> light_faces{Vec3f(0, 1, 2), Vec3f(1, 2, 3)};
     Vec4f light_color = Vec4f(255/255.0f, 255/255.0f, 255/255.0f, 1.0f);
     // std::cout << light_color;
-    float intensity = 300.0f;
+    float intensity = 30.0f;
     QGL::Model *light = new QGL::LightModel(light_verts, light_normals, light_faces, 
                                             light_color, intensity);
     

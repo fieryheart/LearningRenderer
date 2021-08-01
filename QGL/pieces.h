@@ -4,7 +4,7 @@
 #include <chrono>
 #include <iostream>
 #include <random>
-#include "../Geometry/geometry.h"
+#include "../Vec/vec.h"
 
 using namespace std::chrono;
 
@@ -130,7 +130,17 @@ public:
     double second() {return microsec()*0.000001;}
     double millisec() {return microsec()*0.001;}
     long long microsec() {return duration_cast<microseconds>(high_resolution_clock::now() - _start).count();}
-    void show() {std::cout << millisec() << "ms" << std::endl;}
+    void show() {
+        double t = millisec();
+        if (t < 1000) {
+            std::cout << t << "ms" << std::endl;
+        } else if (t >= 1000 && t < 1000*3600) {
+            std::cout << t/1000 << "s" << std::endl;
+        } else {
+            std::cout << t/(1000*3600) << "h" << std::endl;
+        }
+        
+    }
 private:
     time_point<high_resolution_clock>_start;
 };
