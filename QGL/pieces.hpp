@@ -4,7 +4,7 @@
 #include <chrono>
 #include <iostream>
 #include <random>
-#include "../Vec/vec.h"
+#include "../Math/math_init.hpp"
 
 using namespace std::chrono;
 
@@ -23,10 +23,11 @@ struct Frame {
     int channel;
     int id;
     std::vector<Vec4f> buffer;
+    Frame() {}
+    ~Frame(){}
     Frame(int w, int h, int n) : width(w), height(h), channel(n) {
         buffer = std::vector<Vec4f>(w*h, Vec4f(Vec3f(0.0f), 1.0f));
     }
-    ~Frame(){}
     Vec4f get(int i, int j) {
         return buffer[i+width*j];
     }
@@ -34,12 +35,41 @@ struct Frame {
         buffer[i+width*j] = color;
     }
     void draw(const char *filename);
-    void flip();
-    Frame copy();
+    void flip() {
+        for (int i = 0; i < height / 2; ++i) {
+            for (int j = 0; j < width; ++j) {
+                Vec4f t = buffer[j+width*i];
+                buffer[j+width*i] = buffer[j+width*(height-1-i)];
+                buffer[j+width*(height-1-i)] = t;
+            }
+        }
+    }
+    Frame copy() {
+        Frame ret = Frame(width, height, 4);
+        for (int i = 0; i < width; ++i) {
+            for (int j = 0; j < height; ++j) {
+                ret.set(i, j, buffer[i+width*j]);
+            }
+        }
+        return ret;
+    }
     void clear() {
         buffer = std::vector<Vec4f>(width*height, Vec4f(Vec3f(0.0f), 1.0f));
     }
-    void filter(std::vector<float> &kernel, int kw, int k);
+    void filter(std::vector<float> &kernel, int kw, int kh) {
+        Frame frame_copy = copy();
+        for (int i = kw/2; i < width-kw/2; ++i) {
+            for (int j = kh/2; j < height-kh/2; ++j) {
+                Vec4f c = Vec4f(0.0f), c1;
+                for (int k = 0; k < kernel.size(); ++k) {
+                    int ii = k % kw - 1 + i;
+                    int jj = k / kh - 1 + j;
+                    c = c + (frame_copy.get(ii, jj)) * kernel[k];
+                }
+                set(i, j, c);
+            }
+        } 
+    }
 };
 
 // Zbuffer结构
@@ -47,8 +77,10 @@ struct Zbuffer {
     int width;
     int height;
     std::vector<float> zbuffer;
+    Zbuffer() {}
+    ~Zbuffer() {}
     Zbuffer(int w, int h) : width(w), height(h){
-        zbuffer = std::vector<float>(w*h, -std::numeric_limits<float>::max());
+        zbuffer = std::vector<float>(w*h, 1.0);
     }
     float get(int i, int j) {
         return zbuffer[i+width*j];
@@ -57,7 +89,7 @@ struct Zbuffer {
         zbuffer[i+width*j] = z;
     }
     void clear() {
-        std::fill(zbuffer.begin(), zbuffer.end(), -std::numeric_limits<float>::max());
+        std::fill(zbuffer.begin(), zbuffer.end(), 1.0);
     }
 };
 
@@ -106,6 +138,12 @@ struct Sample2D {
     }
 };
 
+//>>>=========================================
+//
+//                辅助工具类
+//
+//>>>=========================================
+
 // 随机发生器
 template <class T1, class T2> struct Randomizer {
     std::default_random_engine random;
@@ -115,11 +153,6 @@ template <class T1, class T2> struct Randomizer {
     T2 get() {return dist(random);}
 };
 
-//>>>=========================================
-//
-//                辅助工具类
-//
-//>>>=========================================
 
 // 计时器
 class Timer {
@@ -149,6 +182,8 @@ private:
 struct Log {
     bool flag;
     std::string prefix;
+    Log() {}
+    ~Log() {}
     Log(bool flag, std::string prefix) : flag(flag), prefix(prefix){}
     void show(int i, int f){
         if (i < f) {

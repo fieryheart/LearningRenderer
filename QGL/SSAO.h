@@ -1,7 +1,7 @@
 #ifndef __SSAO_H__
 #define __SSAO_H__
 
-#include "pieces.h"
+#include "pieces.hpp"
 
 namespace QGL {
 

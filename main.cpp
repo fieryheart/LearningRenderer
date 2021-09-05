@@ -1,5 +1,7 @@
 #include <iostream>
-#include "Labs/labs.h"
+#include "Test/Test.hpp"
+#include "Test/TestRaster.hpp"
+// #include "labs/labs.hpp"
 
 int main()
 {
@@ -7,8 +9,11 @@ int main()
     // Lab_Phong();
     // Lab_Shadow();
     // Lab_SSAO();
-    Lab_PT();
+    // Lab_PT();
 
     // Lab_Test();
+
+    // TestVec2();
+    TestTexture();
     return 0;
 }

@@ -1,38 +1,8 @@
-#include <vector>
-#include <cassert>
-#include <cmath>
-#include <iostream>
-#include "vec.h"
+#include "matrix.hpp"
 
-template <> template <> Vec3<int>::Vec3(const Vec3<float> &v) : x(v.x), y(v.y), z(v.z) {
-}
+namespace QGL {
 
-template <> template <> Vec3<float>::Vec3(const Vec3<int> &v) : x(v.x), y(v.y), z(v.z) {
-}
-
-
-// dot
-float dot(Vec3f &v1, Vec3f &v2) {
-    return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
-}
-
-Vec4f vpow(Vec4f color, float t) {
-    for (int i = 0; i < 3; ++i) {
-        color[i] = std::pow(color[i], t);
-    }
-    return color;
-} 
-
-
-Matrix::Matrix(int r, int c) : m(std::vector<std::vector<float> >(r, std::vector<float>(c, 0.f))), rows(r), cols(c) { }
-
-// Matrix::Matrix(Vec4f v) {
-//     m = std::vector<std::vector<float>>(4, std::vector<float>(1, 0.f));
-//     m[0][0] = v[0];
-//     m[1][0] = v[1];
-//     m[2][0] = v[2];
-//     m[3][0] = v[3];
-// }
+Matrix::Matrix(int r, int c) : m(std::vector<std::vector<float> >(r, std::vector<float>(c, 0.f))), rows(r), cols(c) {}
 
 int Matrix::nrows() {
     return rows;
@@ -142,4 +112,6 @@ std::ostream& operator<<(std::ostream& s, Matrix& m) {
         s << "\n";
     }
     return s;
+}
+
 }

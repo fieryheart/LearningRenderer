@@ -31,7 +31,7 @@ enable_cxx_compiler_flag_if_supported("-fopenmp")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
-file(GLOB SOURCES *.h *.cpp "*/*.h" "*/*.cpp")
+file(GLOB SOURCES *.h *.hpp *.cpp "*/*.h" "*/*.cpp" "*/*.hpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

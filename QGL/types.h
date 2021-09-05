@@ -9,6 +9,11 @@ enum ComType {
     CT_Multi
 };
 
+enum ShadingType {
+    ST_Forwad = 0,
+    ST_Deferred
+};
+
 // 贴图类型
 enum MapType {
     MT_Diffuse = 0,
@@ -16,11 +21,10 @@ enum MapType {
     MT_Specular
 };
 
-// 模型类型
-enum ModelType {
-	MDT_Buildin = 0,
-    MDT_Strange,
-    MDT_Light
+// 对象类型
+enum ObjectType {
+	OBJ_Buildin = 0,
+    OBJ_Strange
 };
 
 //
@@ -30,6 +34,13 @@ enum MatrialType {
     MTT_Glossy,
     MTT_Transparent
 };
+
+enum LightType {
+    L_default = 0,
+    L_Direct,
+    L_Point
+};
+
 }
 
 

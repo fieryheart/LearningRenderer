@@ -1,5 +1,4 @@
 #include "SSAO.h"
-#include "pieces.h"
 
 namespace QGL {
 
@@ -44,7 +43,7 @@ void ScreenSpaceAmbientOcclusion(Frame &frame, Zbuffer &zb) {
 
             // std::cout << i << " " << j << " " << zb.get(i, j) << " " << total_slope << std::endl;
 
-            total_slope = pow(total_slope, 50.f);  // image will be hard to analysis if not do this.
+            total_slope = std::pow(total_slope, 50.f);  // image will be hard to analysis if not do this.
             
             Vec4f color = Vec4f(total_slope);
             color.w = 1.0f;
